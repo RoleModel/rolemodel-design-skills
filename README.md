@@ -1,4 +1,4 @@
-![UI/UX Audit Skill](https://ik.imagekit.io/dtunrco/rZ23MnDJl_jcECVLvY3leaZLeDL2O51IJSoVOtUFu0Q.png)
+![UI/UX Audit Skill](https://ik.imagekit.io/dtunrco/Ox_TPIFD9IbLFwUwSkYoe4BJ6CGJWo-ba19G1ZGXNwI.png)
 
 # UX Audit Skill — Installation Guide
 
