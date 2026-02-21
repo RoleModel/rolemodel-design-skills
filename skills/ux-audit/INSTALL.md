@@ -14,13 +14,13 @@
 ### 1. Clone the repo (if you haven't already)
 
 ```bash
-git clone git@github.com:RoleModel/rolemodel-design-skills.git ~/Development/rolemodel-design-skills
+git clone git@github.com:RoleModel/rolemodel-design-skills.git /path/to/rolemodel-design-skills
 ```
 
 ### 2. Symlink the skill into Claude Code
 
 ```bash
-ln -s ~/Development/rolemodel-design-skills/skills/ux-audit ~/.claude/skills/ux-audit
+ln -s /path/to/rolemodel-design-skills/skills/ux-audit ~/.claude/skills/ux-audit
 ```
 
 Verify it's available — restart Claude Code and check that `/ux-audit` appears in skill completions.
@@ -120,7 +120,7 @@ The skill works on any web project. When `designSystem.name` is not `"optics"`, 
 ## Updating the Skill
 
 ```bash
-cd ~/Development/rolemodel-design-skills
+cd /path/to/rolemodel-design-skills
 git pull
 ```
 
