@@ -1,0 +1,497 @@
+---
+name: ux-audit
+description: Run a UX/UI audit on a web project. Scans for hardcoded CSS values, accessibility violations, design token inconsistencies, and component patterns. Generates an HTML report, Figma deliverables, and DTCG token JSON. Defaults to @rolemodel/optics but configurable for any design system.
+---
+
+# UX/UI Audit Skill
+
+Run structured UX/UI audits on web projects. Scan the codebase for design token inconsistencies, accessibility violations, typography issues, color system problems, and component pattern anti-patterns. Produce an HTML audit report, optional Figma deliverables, and DTCG token JSON for Figma Variables import.
+
+## Invocation
+
+- `/ux-audit` — Full audit (all 5 phases in sequence)
+- `/ux-audit scan` — Phase 1 only: tech stack detection + codebase scan
+- `/ux-audit tokens` — Phase 2 only: design token mapping
+- `/ux-audit accessibility` — Phase 3 only: accessibility audit
+- `/ux-audit report` — Phase 4 only: generate HTML report
+- `/ux-audit figma` — Phase 5 only: Figma deliverables + token JSON
+
+### Audience Mode
+
+Every audit runs in one of two modes. If not specified, ask the user.
+
+- `/ux-audit --internal` — **Internal/Technical mode**: direct language, developer-focused, names specific code issues, uses severity labels (Critical/High/Medium/Pattern)
+- `/ux-audit --client` — **Client-facing mode**: Uses the **"Then / Now / Next"** narrative arc from [references/team-guide.md](references/team-guide.md). Diplomatic language, frames findings as improvement opportunities, acknowledges existing quality, never paints the project as "bad" or "poorly built." Findings are organized by **4 thematic lenses** (Experience Gaps, Visual & Brand Coherence, Modernization Moments, Strategic Opportunities) — NOT by severity. The report should feel like "a magazine, not a bug report."
+
+The mode can also be set in `.ux-audit.json` via `"audience": "internal"` or `"audience": "client"`.
+
+See [references/tone-guide.md](references/tone-guide.md) for detailed language rules for each mode.
+See [references/team-guide.md](references/team-guide.md) for the complete client audit philosophy and deliverable structure.
+
+### Additional Arguments
+
+Arguments after the phase name are passed as context. For example:
+- `/ux-audit scan app/javascript/stylesheets` — scan only that directory
+- `/ux-audit figma gnJ9S1Bf1o8cWIxKpCy1Ec` — push to a specific Figma file
+
+## Configuration
+
+Look for `.ux-audit.json` in the project root. If it does not exist, ask the user these questions and create it:
+
+1. **Audience** — `"internal"` (developer team) or `"client"` (external stakeholder). This fundamentally changes the tone, labels, and framing of the entire report.
+2. **Target design system** — default: `@rolemodel/optics`. Accept any CSS framework name.
+3. **Brand primary color** — accept hex (#F7BD04), HSL (hsl(46, 97%, 49%)), or "use default"
+4. **Brand font family** — default from project's existing CSS
+5. **Figma file key** — or "create new" or "skip"
+6. **Output directory** — default: `dev-tools/ux-audit-output`
+
+Config schema:
+
+```json
+{
+  "audience": "internal",
+  "designSystem": {
+    "name": "optics",
+    "package": "@rolemodel/optics",
+    "version": "2.3.0",
+    "tokenPrefix": "--op-"
+  },
+  "brand": {
+    "name": "ProjectName",
+    "primaryHue": 46,
+    "primarySaturation": 97,
+    "primaryLightness": 49,
+    "neutralHue": 226,
+    "neutralSaturation": 5,
+    "fontFamily": "DM Sans",
+    "caseStudyUrl": null
+  },
+  "figma": {
+    "fileKey": null,
+    "outputMode": "newFile"
+  },
+  "outputDir": "dev-tools/ux-audit-output",
+  "appUrl": "http://localhost:3000"
+}
+```
+
+The `audience` field accepts `"internal"` or `"client"`. This controls:
+- Report template selection (technical vs client-facing)
+- Report structure (severity-based vs Then/Now/Next with 4 thematic lenses)
+- Finding language and tone (direct vs diplomatic, "what we observed" + "what this means for users")
+- Executive summary framing (stats-driven vs narrative paragraph + callout)
+
+When `designSystem.name` is `"optics"`, use the Optics MCP tools (`mcp__optics__*`) for token lookups, component mapping, and contrast checking. For any other design system, fall back to Grep/Read-based analysis.
+
+## Phase 1: Tech Stack Detection + Codebase Scan
+
+**Goal**: Identify the project's tech stack and scan for all hardcoded values.
+
+### Steps
+
+1. **Detect tech stack** by checking for:
+   - `Gemfile` → Rails (check version in Gemfile.lock)
+   - `package.json` → check for react, vue, svelte, next, nuxt, angular
+   - `.scss` files → SCSS preprocessor
+   - `tailwind.config.*` → Tailwind CSS
+   - `@rolemodel/optics` in package.json → Optics already present
+   - Determine templating: `.slim`, `.erb`, `.haml`, `.tsx`, `.jsx`, `.vue`
+
+2. **Find all stylesheet files** using Glob:
+   - `**/*.scss`, `**/*.css`, `**/*.less` (excluding node_modules, vendor)
+   - Also check JSX/TSX for inline styles: `**/*.jsx`, `**/*.tsx`
+
+3. **Scan for hardcoded values** using Grep on each stylesheet file. Reference [references/audit-checklist.md](references/audit-checklist.md) for the complete list of patterns. Key patterns:
+   - Hex colors: `#[0-9a-fA-F]{3,8}`
+   - Pixel values in spacing properties: `(padding|margin|gap|top|right|bottom|left).*\d+px`
+   - Hardcoded font-size: `font-size:\s*\d`
+   - Literal box-shadow: `box-shadow:` not followed by `var(`
+   - Literal border-radius: `border-radius:` not followed by `var(`
+   - Exclude values in comments (`//` and `/* */` lines)
+
+4. **Detect existing token systems**:
+   - CSS custom properties: `--[a-z]` declarations in `:root` or `html`
+   - SCSS variables: `\$[a-z]` declarations
+   - Count which files USE tokens vs hardcode values
+
+5. **Fetch case study context + hero image** (if `brand.caseStudyUrl` is set in config):
+
+   **Hero image** — used in the report header:
+   ```bash
+   curl -s "{caseStudyUrl}" | grep -oE 'data-framer-background-image-wrapper[^>]*>.*?https://framerusercontent\.com/images/[A-Za-z0-9]+\.(webp|jpg|png)' | grep -oE 'https://framerusercontent\.com/images/[A-Za-z0-9]+\.(webp|jpg|png)' | head -5
+   ```
+   - **Prefer `data-framer-background-image-wrapper` elements** — on Framer-built sites, full-bleed hero/background images are in `<div data-framer-background-image-wrapper>` containers. There may be multiple; pick the one that visually represents the project (usually product photography or a hero scene, not the company logo or abstract blur).
+   - If `data-framer-background-image-wrapper` yields nothing, fall back to the first `<img>` with a framerusercontent src that is NOT inside a `pointer-events:none` or blur container
+   - Store as `HERO_IMAGE_URL` for the `{{HERO_IMAGE_URL}}` template placeholder
+   - If nothing found or fetch fails, leave the placeholder empty — CSS `background-image: url()` degrades to a plain dark header
+
+   **Case study narrative context** — used to write the report:
+   Use `WebFetch` on the `caseStudyUrl` with this prompt: *"Extract: (1) the problem or business need the software solved, (2) key features or capabilities built, (3) any outcomes, metrics, or impact statements, (4) quotes or notable language used to describe the product. Return as structured bullet points."*
+
+   Store this as `CASE_STUDY_CONTEXT`. Use it in Phase 4 to:
+   - **"Then" section**: ground the strengths in the original business purpose. Instead of "the app has autosave", write "autosave was built to support long design sessions in the field — and it works." Use the case study's language about what was accomplished and why.
+   - **Executive Summary narrative**: reference real outcomes or impact language from the case study rather than generic framing.
+   - **"Now" framing**: frame current gaps as *evolved expectations*, not failures. "When this was built, X — today users expect Y."
+   - Never fabricate outcomes — only use what the case study explicitly states. If the case study is vague, use it for tone and domain context only.
+
+6. **Report summary** to user:
+   ```
+   Phase 1 Complete: Codebase Scan
+   Tech stack: [framework] + [frontend lib], [preprocessor]
+   Files scanned: N stylesheet files
+   Hardcoded hex colors: N across M files
+   Hardcoded pixel values: N across M files
+   Hardcoded font sizes: N
+   Existing CSS vars: N
+   Existing SCSS vars: N
+   Design system in use: [name or "none"]
+   ```
+
+Store all findings in memory for subsequent phases.
+
+## Phase 2: Design Token Mapping
+
+**Goal**: Map every existing token and hardcoded value to the target design system.
+
+### Steps
+
+1. **Collect unique values** from Phase 1 scan:
+   - Deduplicate hex colors
+   - Deduplicate spacing/size values
+   - Deduplicate font-size values
+   - Deduplicate shadow definitions
+   - Deduplicate border-radius values
+
+2. **Map to target design system**:
+
+   **If Optics** (use MCP tools):
+   - For each unique color: call `mcp__optics__suggest_token_migration` with the hex value
+   - For foreground/background pairs in CSS: call `mcp__optics__check_contrast`
+   - For spacing: compare against `mcp__optics__search_tokens` category "spacing"
+   - For border-radius: compare against `mcp__optics__search_tokens` category "border"
+   - For shadows: compare against `mcp__optics__search_tokens` category "shadow"
+   - For typography: compare against `mcp__optics__search_tokens` category "typography"
+   - Use `mcp__optics__list_components` to identify mappable components
+
+   **If NOT Optics** (grep-based):
+   - Read the target system's CSS/token files from node_modules or docs
+   - Build mapping table manually by comparing values
+   - Use WebSearch if needed to find documentation
+
+3. **Classify each mapping**:
+   - **Exact**: Values match exactly
+   - **Close**: Values within reasonable tolerance (e.g., 2px spacing, 5% color)
+   - **Miss**: No good equivalent in target system
+   - **WCAG Fail**: Current value has a contrast issue
+
+4. **Report summary**:
+   ```
+   Phase 2 Complete: Token Mapping
+   Colors mapped: N/M (X exact, Y close, Z miss)
+   Spacing mapped: N/M
+   Border radius: N/M
+   Typography: N/M
+   Shadows: N/M
+   Components mappable: N of M
+   WCAG contrast failures: N
+   ```
+
+## Phase 3: Heuristic Audit
+
+**Goal**: Walk the product through the 10 UX sections from [references/day-1-audit-checklist.html](references/day-1-audit-checklist.html) and produce classified findings for each. Combine observable heuristic evaluation (via `appUrl` or provided screenshots) with static code analysis patterns.
+
+Run all 10 sections. For each section, produce a list of findings classified by severity using [references/severity-model.md](references/severity-model.md).
+
+### Section 1: First Impressions & Visual Coherence
+
+Walk the app at `appUrl` (or use screenshots if provided). Check:
+
+- Does the product make a strong first impression? Is the purpose clear in the first 30 seconds?
+- Is the visual language consistent? Check button styles, typography, color usage, spacing, and iconography across multiple screens.
+- Does the brand come through clearly?
+- Is there visual hierarchy on key screens — can you tell what's most important at a glance?
+- Is the color system doing meaningful work (semantic usage) or are colors arbitrary?
+- Does the typography scale feel intentional? Are heading levels distinct?
+
+Code scan support: count unique hex colors and font-size values from Phase 1 to quantify inconsistency.
+
+### Section 2: Navigation & Wayfinding
+
+- Is the navigation structure predictable (follows conventions users know)?
+- Do users always know where they are? Active states, breadcrumbs, page titles?
+- Are navigation labels clear, plain-language, jargon-free?
+- Is navigation depth appropriate (≤3 clicks to most things)?
+- Does navigation work on mobile?
+- Are there dead ends — screens with no clear path forward or back?
+
+Code scan support: grep for `display: none` inside media queries (content being hidden vs adapting).
+
+### Section 3: Cognitive Load & Complexity
+
+- Are screens trying to do too much? Flag pages with overwhelming options or decisions.
+- Is information chunked effectively — related items grouped, easy to scan?
+- Are forms as simple as possible? Extra fields, illogical order?
+- Does the UI use meaningful defaults to reduce decisions?
+- Is the language plain and direct, or does it require interpretation?
+- Are there progress indicators for multi-step processes?
+
+### Section 4: Key Flows & Task Completion
+
+Identify the top 2–3 core user tasks before evaluating this section. Walk each flow end to end.
+
+- Is the entry point obvious?
+- Are calls to action clear and appropriately sized?
+- Does the flow match the user's mental model of the task?
+- Are there unnecessary interruptions or confirmation steps?
+- Are error states handled gracefully — clear, human, actionable?
+- Does the product handle edge cases (empty states, long content, slow connections)?
+- What is the peak moment and ending of each flow — are they positive?
+
+### Section 5: Feedback & System Communication
+
+- Does the product acknowledge user actions (buttons, form submissions)?
+- Are loading states handled with visual feedback?
+- Are success and error states distinct and immediately clear?
+- Is undo/back behavior predictable?
+- Are notifications and alerts used appropriately (not over-interrupting)?
+
+Code scan support: grep for loading spinner patterns; grep for success/error toast/flash component usage.
+
+### Section 6: Consistency & Standards
+
+- Do similar elements behave the same way throughout?
+- Does the product follow platform conventions (web, iOS, Android)?
+- Is the component set stable, or are there one-off UI elements?
+- Are interactive elements visually distinguishable from static ones?
+
+Code scan support: Phase 1 hardcoded value counts per file indicate where visual drift is concentrated.
+
+### Section 7: Accessibility
+
+Static code analysis — grep the codebase for each of the following:
+
+**Focus management**:
+- `outline:\s*(none|0)` without corresponding `:focus-visible` replacement
+- Missing skip-nav link (`[href="#main"]` or similar)
+- Missing `<main>` landmark
+
+**ARIA issues**:
+- `role="menu"` on `<nav>` elements (incorrect — should be `navigation`)
+- Buttons/toggles missing `aria-expanded`
+- Icon-only buttons missing `aria-label`
+- `<img` without `alt` attribute
+- `<iframe` without `title` attribute
+- Modals without `role="dialog"` and `aria-modal="true"`
+
+**Semantic HTML**:
+- `<a>` wrapping `<button>` (or vice versa)
+- `<div>` with click handlers but no `role="button"` or `tabindex`
+- `user-scalable=no` or `maximum-scale=1` in viewport meta
+
+**Color contrast**:
+- For each foreground/background pair identified in Phase 1, check WCAG AA ratio
+- If Optics: use `mcp__optics__check_contrast`
+- Flag anything below 4.5:1 (normal text) or 3:1 (large text)
+
+**Form accessibility**:
+- `<input>` without associated `<label>` or `aria-label`
+- `<select>` placeholder options not `disabled`
+- Missing `aria-required` on required fields
+- No inline validation (submit-only)
+
+Also note observable accessibility gaps from the product walkthrough: tap target sizes, motion, color-only status indicators.
+
+### Section 8: Mobile & Responsive Behavior
+
+- Does the layout adapt gracefully across breakpoints (mobile, tablet, desktop)?
+- Are touch targets appropriately sized (minimum 44×44px)?
+- Is any content hidden on mobile that's visible on desktop?
+- Does the navigation pattern work on mobile? Is it thumb-friendly?
+- Do forms work on mobile keyboards (correct input types, numeric for phone)?
+
+Code scan support: grep for `@media` queries and `display: none` patterns within them.
+
+### Section 9: Performance Perception
+
+Observable only — not a technical perf audit:
+
+- Does the product feel fast? Note any perceived slowness during loading, transitions, interactions.
+- Are images and media obviously oversized?
+- Are transitions and animations additive or distracting?
+
+### Section 10: Strategic & Forward-Looking Notes
+
+Step back from individual findings:
+
+- What is the product's single strongest moment? What should be protected and built on?
+- Where is the product most constrained by past decisions?
+- What 1–2 changes would have the highest user impact with moderate effort?
+- Is there a meaningful modernization opportunity (design system, accessibility overhaul, mobile-first)?
+- What does "next" look like for this product?
+
+### Phase 3 Output
+
+Report summary to user:
+
+```
+Phase 3 Complete: Heuristic Audit
+Section 1 – First Impressions:    N findings
+Section 2 – Navigation:           N findings
+Section 3 – Cognitive Load:       N findings
+Section 4 – Key Flows:            N findings
+Section 5 – Feedback:             N findings
+Section 6 – Consistency:          N findings
+Section 7 – Accessibility:        N findings (M WCAG violations)
+Section 8 – Mobile:               N findings
+Section 9 – Performance:          N findings
+Section 10 – Strategic:           N findings
+Total: N findings (C critical, H high, M medium, P patterns)
+```
+
+Classify each finding using [references/severity-model.md](references/severity-model.md).
+
+## Phase 4: Report Generation
+
+**Goal**: Generate the comprehensive HTML audit report in the appropriate tone.
+
+### Steps
+
+1. **Select template** based on audience mode:
+   - Internal → [references/report-template.html](references/report-template.html)
+   - Client → [references/report-template-client.html](references/report-template-client.html)
+
+2. **Apply tone rules** from [references/tone-guide.md](references/tone-guide.md):
+   - All finding titles, descriptions, and executive summary language must follow the active tone guide
+   - Client mode: every finding must be rewritten before inclusion (see tone guide for transformation rules)
+
+3. Replace template placeholders:
+   - `{{PROJECT_NAME}}` — from .ux-audit.json brand.name
+   - `{{DESIGN_SYSTEM}}` — from .ux-audit.json designSystem.name
+   - `{{ACCENT_COLOR}}` — computed from brand primary HSL
+   - `{{FONT_FAMILY}}` — from .ux-audit.json brand.fontFamily
+   - `{{DATE}}` — current date
+   - `{{FINDING_COUNT}}` — total findings from Phase 1-3
+   - `{{TECH_STACK}}` — from Phase 1 detection
+
+4. **Populate data sections** (differs by audience):
+
+   **Client mode** — uses **Then / Now / Next** narrative arc from team guide:
+
+   **Executive Summary** (one page, shareable upward):
+   - 3 high-level stats meaningful to non-technical readers (e.g. "7/12 UX Principles Met", "5 Accessibility Improvements", "3 Strategic Opportunities")
+   - One narrative paragraph: plain language, no jargon, core opportunity + 2-3 recommended actions + shape of impact
+   - One callout with the single most important takeaway
+
+   **Then** — Honor the original work (green section):
+   - 4-6 genuine strengths of the existing product
+   - What were the constraints? What did it accomplish?
+   - This is NOT faint praise — it's real recognition of what was built well
+   - Frame: "this was well-executed for the context it was built in"
+
+   **Now** — What's changed, organized by 4 thematic lenses:
+
+   Each finding pairs **"what we observed"** with **"what this means for users."** Every observation must come from actually reading the application code. Never fabricate.
+
+   - **Lens 1: Experience Gaps** — Where users have to work harder than they should. Confusing navigation, flows that don't match mental models, missing confirmations, empty states, etc.
+   - **Lens 2: Visual & Brand Coherence** — Design inconsistencies that accumulate over time. Includes a **type scale visual** and **color palette visual** showing current state vs what's available in the target design system. Frame as: "there's an opportunity to make this feel like one cohesive, modern product again."
+   - **Lens 3: Modernization Moments** — Table-stakes improvements since the original design: accessibility (WCAG), mobile responsiveness, component systems, focus management, keyboard navigation.
+   - **Lens 4: Strategic Opportunities** — Where the product is constrained by old design decisions. What could it do that it doesn't today? This section should feel generative — a glimpse of v-next, not a punch list.
+
+   Also include:
+   - **UX Principles Assessment** — 8-12 principles evaluated against actual behavior. Use plain-language names (NOT academic law names like "Jakob's Law"). Each gets status: `pass` (Aligned), `opportunity`, or `attention` (Needs Attention).
+   - Typography and color palette visuals within the Visual & Brand Coherence lens
+
+   **Color palette visual — Optics token structure** (when designSystem is "optics"):
+   - **Primary**: `--op-color-primary-*` — steps: `plus-eight`, `plus-five`, `plus-two`, `base`, `minus-three`, `minus-seven`, `minus-nine`. Use brand HSL from config.
+   - **Neutral**: `--op-color-neutral-*` — BLUE-TINTED (H:226, S:5%), NOT warm. Steps: `plus-eight`, `plus-seven`, `plus-five`, `base`, `minus-five`, `minus-seven`, `minus-nine`.
+   - **Alerts** (NOT "Semantic"): `--op-color-alerts-notice-base` (green, ~H:134), `--op-color-alerts-danger-base` (red, ~H:0), `--op-color-alerts-warning-base` (yellow, ~H:48), `--op-color-alerts-info-base` (blue, ~H:217). Use `plus-seven` for light backgrounds (e.g. `--op-color-alerts-danger-plus-seven`). No standalone "light" variants — use the step scale.
+   - **On-colors**: Show WCAG-safe text pairings: `--op-color-primary-on-base`, `--op-color-neutral-on-plus-eight`, `--op-color-neutral-on-minus-seven`, `--op-color-alerts-danger-on-plus-seven`.
+   - Do NOT use warm neutrals (H:46) for the neutral palette — Optics neutrals are blue-tinted (H:226).
+
+   **Next** — The opportunity:
+   - Roadmap with 3 effort tiers: "Quick Win" / "Phased Modernization" / "Comprehensive Refresh"
+   - Component enhancement opportunities grid
+   - **"What's Next" invitation** — an explicit, open-ended invitation to explore together. Starting a conversation, not closing a sale. What could phase one look like? What questions would we explore together?
+
+   **Client mode rules**:
+   - NEVER include file paths, line numbers, or code in client reports
+   - Findings grouped by theme, NOT severity
+   - Every finding has "observed" + "means" (no "benefit" or "law" labels)
+   - See [references/tone-guide.md](references/tone-guide.md) for language transformation rules
+
+   **Internal mode** — populate [references/report-template.html](references/report-template.html):
+
+   The internal report uses the same visual style as the Day 1 checklist. It IS the working audit document — the agent fills it out as it conducts the audit, then adds code scan data at the end.
+
+   Fill in these placeholders from `.ux-audit.json` and Phase 1–3 findings:
+   - `{{PROJECT_NAME}}`, `{{DATE}}`, `{{AUDITOR}}`, `{{TECH_STACK}}`, `{{DESIGN_SYSTEM}}`, `{{APP_URL}}`, `{{FIGMA_FILE}}`
+   - `{{CORE_TASK_1/2/3}}` — the top 3 user tasks evaluated in Section 4
+   - `{{OBSERVATIONS_1}}` through `{{OBSERVATIONS_10}}` — written findings per section (plain prose, include file paths and line numbers)
+   - `{{EXEC_VERDICT}}` — one paragraph: what the audit found, the single most important recommendation, shape of the effort
+   - Stat boxes: 3–5 numbers meaningful to engineers (hardcoded value count, WCAG failures, token coverage %, components mappable)
+   - `{{HARDCODED_TOTAL}}`, `{{HARDCODED_FILE_COUNT}}`
+
+   HTML sections to populate with generated markup (see comments in template for exact format):
+   - **Token mapping tables**: one `<h3>` + `<table class="token-table">` per category (Colors, Spacing, Border Radius, Typography, Shadows). Use `<span class="match|close|miss">` for fit classification.
+   - **Hardcoded values bar chart**: one `.bar-row` per file, sorted by count descending. Width = percentage of max count. Classes: `high` (>20), `medium` (10–20), `low` (<10).
+   - **Component mapping grid**: one `.comp-card` per component mapping.
+   - **Findings summary table**: one `<tr>` per finding, using `<span class="severity-badge badge-critical|high|medium|pattern">` for severity.
+   - **Claude Prompting Notes**: any Claude prompts that generated notably useful output during this audit.
+
+   Severity classifications for findings in observations text:
+   - **Critical (C)**: WCAG A/AA violations, correctness bugs, data loss risks
+   - **High (H)**: UX quality issues — broken hierarchy, missing confirmations, missing empty states
+   - **Medium (M)**: Maintainability — inconsistent tokens, missing type scale, magic numbers
+   - **Pattern (P)**: Cross-cutting issues appearing in multiple places
+
+   Observation text format: `[ID] **Title.** Description. (file:line if applicable)`
+
+5. Ensure `mkdir -p {outputDir}` exists
+6. Write report to `{outputDir}/ux-audit-report.html`
+7. Tell the user the file path and suggest opening in browser
+
+## Phase 5: Figma Deliverables
+
+**Goal**: Generate DTCG token JSON and push audit report to Figma.
+
+### Steps
+
+1. **Generate DTCG token JSON files**:
+   - If Optics: run `node ${CLAUDE_SKILL_ROOT}/scripts/generate-figma-variables.mjs --config .ux-audit.json --output {outputDir}`
+   - This generates `light.tokens.json` and `dark.tokens.json`
+   - See [references/dtcg-format.md](references/dtcg-format.md) for format details
+   - Tell user: "Import these via Figma > Local Variables > Import"
+
+2. **Push report to Figma** using `mcp__figma__generate_figma_design`:
+   - Follow the workflow in [references/figma-workflow.md](references/figma-workflow.md)
+   - Call `generate_figma_design` without captureId to get the JS capture snippet
+   - Start a local HTTP server to serve the report HTML
+   - Guide user to open the URL with `#figmacapture&figmadelay=2000`
+   - Poll with captureId once user confirms the capture toast appeared
+   - Return the Figma URL
+
+3. **Report deliverables**:
+   ```
+   Phase 5 Complete: Figma Deliverables
+   Token files:
+     {outputDir}/light.tokens.json (N tokens)
+     {outputDir}/dark.tokens.json (N tokens)
+   Audit report: {outputDir}/ux-audit-report.html
+   Figma: [URL or "skipped"]
+   ```
+
+## Strict Rules
+
+1. **Never fabricate findings.** Every finding must reference a specific file path and line number or code pattern that you verified by reading the actual source code. If you cannot find evidence, do not report the finding.
+
+2. **Count precisely.** When reporting "135 hardcoded values", that number must come from actual Grep results. Do not estimate or round creatively.
+
+3. **Verify token mappings.** When mapping a value like `#2C2C2C` to `--op-color-neutral-minus-six`, verify the match by checking the actual token value via MCP or CSS source. State whether it's Exact, Close, or Miss.
+
+4. **Test contrast claims.** When flagging a WCAG contrast failure, state the actual ratio and the required threshold. Use `mcp__optics__check_contrast` or calculate from the color values.
+
+5. **Acknowledge what works.** If the project already uses tokens correctly in some areas, credit that. Not everything is broken.
+
+6. **Be specific about effort.** Migration time estimates should be based on actual file count, component count, and token mapping completeness — not generic guesses.
+
+7. **Use the TodoWrite tool** to track progress through the phases. Mark each phase as completed when done.
