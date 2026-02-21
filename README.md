@@ -1,3 +1,5 @@
+![UI/UX Audit Skill](https://ik.imagekit.io/dtunrco/rZ23MnDJl_jcECVLvY3leaZLeDL2O51IJSoVOtUFu0Q.png)
+
 # UX Audit Skill — Installation Guide
 
 ## Prerequisites
