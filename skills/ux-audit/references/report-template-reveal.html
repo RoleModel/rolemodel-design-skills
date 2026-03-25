@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{PROJECT_NAME}} — Opportunity Assessment</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300;1,9..40,400;1,9..40,500;1,9..40,600;1,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css"
+    />
+    <style>
+      /* ===== BRAND COLORS — replaced by agent ===== */
+      :root {
+        --accent: {{ACCENT_COLOR}};
+        --dark: {{DARK_COLOR}};
+        --dark-mid: #2a3a52;
+        --dark-blue: #193c64;
+        --text-blue: #3a70b3;
+        --bright-blue: #2a83f7;
+        --text-green: #86c774;
+        --text: #1a1a1a;
+        --text-muted: #555;
+        --text-light: rgba(255, 255, 255, 0.85);
+        --text-dim: rgba(255, 255, 255, 0.55);
+        --section-number: #c8cdd4;
+      }
+
+      /* ===== BASE ===== */
+      .reveal {
+        font-family:
+          "DM Sans",
+          -apple-system,
+          sans-serif;
+        color: var(--text);
+      }
+      .reveal h1,
+      .reveal h2,
+      .reveal h3,
+      .reveal h4 {
+        font-family:
+          "DM Sans",
+          -apple-system,
+          sans-serif;
+        letter-spacing: -0.02em;
+        text-transform: none;
+      }
+      .reveal section {
+        text-align: left;
+      }
+      .reveal .slides {
+        width: 1200px !important;
+      }
+      .reveal .slides > section {
+        padding: 0;
+      }
+      .reveal .slides > section > section {
+        padding: 0;
+      }
+
+      /* Section label — small caps above headings */
+      .section-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        margin-bottom: 16px;
+        color: var(--text-muted);
+      }
+      .section-label.light {
+        color: var(--text-dim);
+      }
+
+      /* Content container — inset from edges like the Figma design */
+      .slide-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-inline: 80px;
+      }
+      .slide-content.centered {
+        justify-content: center;
+      }
+
+      /* ===== MEDIA — screenshots, video, embeds ===== */
+      .section-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 12px;
+      }
+      .section-image {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+      }
+
+      /* Interactive embed — click to activate, Esc to exit */
+      .embed-wrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      .embed-wrapper iframe {
+        width: 100%;
+        height: 800px;
+        border: none;
+        border-radius: 8px;
+      }
+      .embed-wrapper .embed-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        border-radius: 8px;
+        transition: background 0.2s;
+      }
+      .embed-wrapper .embed-overlay:not(.active) {
+        background: rgba(0,0,0,0.03);
+      }
+      .embed-wrapper .embed-overlay .embed-cta {
+        padding: 12px 24px;
+        background: rgba(0,0,0,0.6);
+        color: white;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        backdrop-filter: blur(4px);
+        transition: opacity 0.2s, transform 0.2s;
+      }
+      .embed-wrapper .embed-overlay:hover .embed-cta {
+        background: rgba(0,0,0,0.8);
+        transform: scale(1.02);
+      }
+      .embed-wrapper .embed-overlay.active {
+        pointer-events: none;
+      }
+      .embed-wrapper .embed-overlay.active .embed-cta {
+        opacity: 0;
+      }
+      .embed-wrapper .embed-exit {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 20;
+        padding: 8px 16px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        backdrop-filter: blur(4px);
+      }
+      .embed-wrapper.interactive .embed-exit {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* ===== COVER ===== */
+      .slide-cover {
+        position: relative;
+        display: flex !important;
+        flex-direction: column;
+        justify-content: flex-end;
+        min-height: 100%;
+        color: white;
+      }
+      .slide-cover .cover-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          {{COVER_OVERLAY_GRADIENT}}
+        );
+        z-index: 1;
+      }
+
+      .logo {
+        background-image: url(RMS-logo-Color.svg);
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        width: 100px;
+        height: 60px;
+        position: fixed;
+        bottom: 24px;
+        left: 24px;
+      }
+
+      .slide-cover .cover-content {
+        position: relative;
+        z-index: 2;
+        padding: 0 100px 80px;
+      }
+      .slide-cover .cover-meta {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        color: var(--accent);
+        margin-bottom: 20px;
+      }
+      .slide-cover .cover-logo {
+        height: 40px;
+        margin-bottom: 8px;
+      }
+      .slide-cover h1 {
+        font-size: 2.6em;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.7);
+        text-shadow: none;
+        margin: 0;
+        opacity: 0.7;
+        line-height: 1;
+      }
+
+      /* ===== EXECUTIVE SUMMARY (light bg) ===== */
+      .slide-exec .section-label {
+        color: var(--text-blue);
+      }
+      .slide-exec .exec-headline {
+        font-size: 1.2em;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 28px;
+        max-width: 820px;
+      }
+      .slide-exec .exec-headline em {
+        font-style: italic;
+        color: var(--dark-mid);
+        font-weight: 500;
+      }
+      .slide-exec .exec-body {
+        display: flex;
+        gap: 64px;
+      }
+      .slide-exec .exec-narrative {
+        flex: 1;
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text);
+      }
+      .slide-exec .exec-stats {
+        width: 50%;
+        flex-shrink: 0;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+      }
+      .stat-row {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 20px;
+        border-top: 1px solid #e5e7eb;
+      }
+      .stat-row:first-child {
+        border-top: none;
+      }
+      .stat-number {
+        font-size: 2em;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+        min-width: 90px;
+      }
+      .stat-label {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        padding-top: 8px;
+      }
+
+      /* ===== THEN (dark bg) ===== */
+      .slide-then {
+        color: var(--text-light);
+      }
+      .slide-then .section-label {
+        color: var(--text-light);
+      }
+      .slide-then .then-heading {
+        font-size: 4em;
+        font-weight: 700;
+        margin-bottom: 40px;
+        color: var(--text-green);
+      }
+      .then-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0;
+      }
+      .then-card {
+        flex: 0 0 33.333%;
+        padding: 0 32px 32px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 28px;
+      }
+      .then-card strong {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-light);
+      }
+      .then-card p {
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-light);
+        margin: 0;
+      }
+
+      /* ===== NOW INTRO (light bg) ===== */
+      .slide-now-intro .section-label {
+        color: var(--text-muted);
+      }
+      .slide-now-intro .now-heading {
+        font-size: 4em;
+        font-weight: 700;
+        margin-bottom: 24px;
+        color: var(--text);
+      }
+      .slide-now-intro .now-subtitle {
+        font-size: 16px;
+        line-height: 1.7;
+        color: var(--text-muted);
+        max-width: 680px;
+      }
+
+      /* ===== NOW — Numbered sections (01, 02, 03, 04) ===== */
+      .slide-section .section-label {
+        color: var(--text-muted);
+      }
+      .section-number {
+        font-size: 4em;
+        font-weight: 700;
+        color: var(--section-number);
+        line-height: 1;
+        margin-bottom: 8px;
+      }
+      .section-headline {
+        font-size: 1.5em;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 16px;
+        max-width: 680px;
+      }
+      .section-body {
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text-muted);
+        max-width: 680px;
+        margin-bottom: 16px;
+      }
+      .section-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 4px 12px;
+        border-radius: 4px;
+      }
+      .section-screenshot {
+        margin-top: 32px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+        border: 1px solid #e0e0e0;
+      }
+      .section-screenshot img {
+        width: 100%;
+        display: block;
+      }
+
+      /* ===== COLOR SYSTEM (dark bg) ===== */
+      .slide-colors {
+        color: white !important;
+      }
+      .slide-colors .section-label {
+        color: var(--text-dim);
+      }
+      .slide-colors .color-heading {
+        font-size: 3em;
+        font-weight: 700;
+        color: var(--accent) !important;
+        margin-bottom: 12px;
+      }
+      .slide-colors .color-intro {
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--text-light);
+        margin-bottom: 36px;
+        max-width: 580px;
+      }
+      .palette-group {
+        margin-bottom: 28px;
+      }
+      .palette-row-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--text-dim);
+        margin-bottom: 10px;
+      }
+      .palette-row {
+        display: flex;
+        gap: 0;
+        margin-bottom: 0;
+      }
+      .palette-swatch {
+        flex: 1;
+        height: 80px;
+        border-radius: 8px;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        padding: 8px 12px;
+      }
+      .palette-swatch .swatch-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .palette-swatch.light-text .swatch-label {
+        color: rgba(0, 0, 0, 0.5);
+      }
+
+      /* ===== RECOMMENDATION / NEXT (dark bg) ===== */
+      .slide-recommendation {
+        color: white !important;
+      }
+      .slide-recommendation .section-label {
+        color: var(--text-dim);
+      }
+      .slide-recommendation .rec-headline {
+        font-size: 1em;
+        font-weight: 400;
+        line-height: 1.35;
+        color: white;
+        margin-bottom: 24px;
+        max-width: 850px;
+      }
+      .rec-items {
+        display: flex;
+        flex-direction: column;
+        max-width: 650px;
+        gap: 0;
+      }
+      .rec-item:first-child {
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .rec-item {
+        display: flex;
+        align-items: flex-end;
+        gap: 32px;
+        padding: 20px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .rec-item-number {
+        font-size: 2.3em;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 0.8;
+        width: 150px;
+      }
+      .rec-item-text {
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--text-light);
+        padding-top: 10px;
+        max-width: 700px;
+      }
+
+      .footer {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+      .footer p {
+        text-align: right;
+      }
+      .footer-icon {
+        width: 32px;
+        height: 32px;
+        background-image: url(RMS-lcon.svg);
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+
+      /* ===== BEFORE/AFTER ===== */
+      .finding-ba {
+        display: flex;
+        margin-top: 12px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+      }
+      .ba-col {
+        flex: 1;
+        padding: 12px 14px;
+        font-size: 12px;
+        line-height: 1.5;
+        display: flex;
+        flex-direction: column;
+      }
+      .ba-col.before {
+        background: #fafafa;
+        border-right: 1px solid #e0e0e0;
+      }
+      .ba-col.after {
+        background: #f0faf0;
+      }
+      .ba-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin-bottom: 6px;
+      }
+      .ba-col.before .ba-label {
+        color: #999;
+      }
+      .ba-col.after .ba-label {
+        color: #2e7d32;
+      }
+      .ba-col p {
+        color: #444;
+        line-height: 1.5;
+      }
+      .ba-col .ba-screen {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .ba-col .ba-screen img {
+        max-width: 100%;
+        border-radius: 4px;
+      }
+
+      /* ===== UX PRINCIPLES ===== */
+      .principles-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .principle-card {
+        flex: 0 0 calc(33.333% - 8px);
+        background: #f5f5f5;
+        border-radius: 12px;
+        padding: 16px;
+        border-left: 4px solid #ccc;
+      }
+      .principle-card.pass {
+        border-left-color: #2e7d32;
+      }
+      .principle-card.opportunity {
+        border-left-color: var(--accent);
+      }
+      .principle-card.attention {
+        border-left-color: #e65100;
+      }
+      .principle-status {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin-bottom: 4px;
+      }
+      .principle-card.pass .principle-status {
+        color: #2e7d32;
+      }
+      .principle-card.opportunity .principle-status {
+        color: #c49500;
+      }
+      .principle-card.attention .principle-status {
+        color: #e65100;
+      }
+      .principle-name {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        line-height: 1;
+      }
+      .principle-detail {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+
+      /* ===== CONTROLS ===== */
+      .reveal .progress {
+        color: var(--bright-blue);
+      }
+      .reveal .controls button {
+        color: var(--dark);
+        transition: color 0.3s;
+      }
+      .reveal .slide-number {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .reveal .controls {
+        display: none;
+        position: absolute;
+        top: auto;
+        bottom: 20px;
+        right: 40px;
+        left: auto;
+        z-index: 11;
+        color: inherit;
+        pointer-events: none;
+        font-size: 10px;
+      }
+
+      /* Nav arrows on dark slides — reveal.js adds has-dark-background to .reveal */
+      .reveal.has-dark-background .controls button {
+        color: rgba(255, 255, 255, 0.6) !important;
+      }
+      .reveal.has-dark-background .controls button .controls-arrow {
+        border-color: rgba(255, 255, 255, 0.6) !important;
+      }
+      .reveal.has-dark-background .controls button:hover .controls-arrow {
+        border-color: rgba(255, 255, 255, 0.9) !important;
+      }
+      .reveal.has-dark-background .slide-number {
+        color: rgba(255, 255, 255, 0.4) !important;
+      }
+      .reveal.has-dark-background .progress {
+        color: var(--accent) !important;
+      }
+
+      /* ===== PDF EXPORT ===== */
+      @media print {
+        .reveal .slides section {
+          page-break-after: always;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="logo"></div>
+      <div class="slides">
+
+        <!-- ==================== COVER ==================== -->
+        <section
+          data-transition="slide"
+          class="slide-cover"
+          data-background-color="{{DARK_COLOR}}"
+          data-background-image="{{HERO_IMAGE_URL}}"
+          data-background-size="cover"
+          data-background-position="center"
+          data-background-opacity="0.1"
+        >
+          <div class="cover-content">
+            <div class="cover-meta">
+              RoleModel Software &middot; {{DATE}}
+            </div>
+            <!-- {{COVER_LOGO}} -->
+            <!--
+              Optional: client logo image tag.
+              Example: <img class="cover-logo" src="logo.svg" alt="Client Logo">
+              If no logo is available, omit this block entirely.
+            -->
+            <h1>Opportunity Assessment</h1>
+          </div>
+        </section>
+
+        <!-- ==================== EXECUTIVE SUMMARY ==================== -->
+        <section data-transition="slide" class="slide-exec">
+          <div class="slide-content">
+            <div class="section-label">Executive Summary</div>
+            <div class="exec-headline">
+              <!-- {{EXEC_HEADLINE}} -->
+              <!--
+                A bold statement summarizing the product's position and opportunity.
+                Use <em> for the italic accent portion.
+
+                Example:
+                {{PROJECT_NAME}} is a genuinely capable product with a strong
+                technical foundation — <em>the opportunity is to bring the
+                experience up to the same level as the engineering.</em>
+              -->
+            </div>
+            <div class="exec-body">
+              <div class="exec-narrative">
+                <!-- {{NARRATIVE}} -->
+                <!--
+                  Two paragraphs. First: what works and why it matters.
+                  Second: what's evolved and what this assessment covers.
+                -->
+              </div>
+              <div class="exec-stats">
+                <!-- {{STAT_ROWS}} -->
+                <!--
+                  3 stat rows. Large number on left, description on right.
+                  Example:
+                  <div class="stat-row">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Areas of improvement shown in this deck, each with a proposed direction.</div>
+                  </div>
+                  <div class="stat-row">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Improvements built directly on Optics components — floating panels, settings, and wizard overlay.</div>
+                  </div>
+                  <div class="stat-row">
+                    <div class="stat-number">22</div>
+                    <div class="stat-label">Hardcoded color values to consolidate into Optics tokens with WCAG-safe pairings built in.</div>
+                  </div>
+                -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== THEN ==================== -->
+        <section
+          data-transition="slide"
+          data-background-color="{{DARK_COLOR}}"
+          class="slide-then"
+        >
+          <div class="slide-content">
+            <div class="section-label">What was built</div>
+            <div class="then-heading">Then.</div>
+            <div class="then-grid">
+              <!-- {{THEN_ITEMS}} -->
+              <!--
+                IMPORTANT: Honor the original work genuinely.
+                Use a 3-column card grid. Each card has a bold title and description paragraph.
+
+                Example:
+                <div class="then-card">
+                  <strong>Zero-friction entry</strong>
+                  <p>Start designing without an account. Projects are saved locally and the
+                    editor is immediately available — no signup wall.</p>
+                </div>
+                <div class="then-card">
+                  <strong>Reactive pipe calculator</strong>
+                  <p>Recommended pipe size updates in real time as HP and CFM values change,
+                    giving users immediate, contextual guidance.</p>
+                </div>
+                <div class="then-card">
+                  <strong>Contextual tool help</strong>
+                  <p>Instruction popups appear exactly when a drawing tool is selected,
+                    reducing the learning curve for new users.</p>
+                </div>
+              -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== NOW ==================== -->
+        <section data-transition="slide">
+          <!-- Now intro -->
+          <section class="slide-now-intro">
+            <div class="slide-content centered">
+              <div class="section-label">Where we are today</div>
+              <div class="now-heading">Now.</div>
+              <p class="now-subtitle">
+                <!-- {{NOW_INTRO}} -->
+                <!--
+                  Brief intro: how many areas, what the findings cover.
+                  Example: Four areas where we've done the design work. Each improvement
+                  is scoped, practical, and built on the Optics design system you already use.
+                -->
+              </p>
+            </div>
+          </section>
+
+          <!-- {{NOW_SECTIONS}} -->
+          <!--
+            NOW SECTIONS — one <section> per finding area (typically 3-5).
+            Each gets a sequential number (01, 02, 03, ...) and a section label.
+
+            FINDING WITH INLINE SCREENSHOT (preferred):
+
+            <section class="slide-section">
+              <div class="slide-content centered">
+                <div class="section-label">01 · Section Name</div>
+                <div class="section-number">01</div>
+                <div class="section-headline">A bold headline describing the improvement.</div>
+                <div class="section-body">
+                  1-3 sentences explaining the current state and the proposed change.
+                  Keep it conversational but specific.
+                </div>
+                <img class="section-image" src="screenshot.png" alt="Screenshot description">
+              </div>
+            </section>
+
+            VIDEO WALKTHROUGH SLIDE (optional — after all findings):
+
+            <section class="slide-section">
+              <div class="slide-content centered">
+                <video controls class="section-video" src="demo.mp4" loop></video>
+              </div>
+            </section>
+
+            INTERACTIVE EMBED (optional — live app preview):
+            Uses click-to-activate pattern so reveal.js navigation isn't lost.
+            Iframe is lazy-loaded (about:blank until clicked). Esc exits.
+
+            <section class="slide-section">
+              <div class="embed-wrapper">
+                <div class="embed-overlay" onclick="activateEmbed(this)">
+                  <span class="embed-cta">Click to interact with live demo</span>
+                </div>
+                <button class="embed-exit" onclick="deactivateEmbed(this)">✕ Exit demo · press Esc</button>
+                <iframe src="about:blank" data-src="https://app-url.vercel.app" style="pointer-events: none;"></iframe>
+              </div>
+            </section>
+
+            IMAGE SOURCING:
+            - Figma mockups: mcp__figma__get_screenshot(nodeId, fileKey)
+            - App screenshots: capture from appUrl via browser automation
+            - Embed as base64 data URIs for self-contained, or use relative
+              paths when deploying with assets alongside index.html
+          -->
+        </section>
+
+        <!-- ==================== COLOR SYSTEM (dark slide) ==================== -->
+        <section class="slide-colors" data-background-color="{{DARK_COLOR}}">
+          <div class="slide-content">
+            <div class="section-label light">Design System</div>
+            <div class="color-heading">Color System</div>
+            <div class="color-intro">
+              <!-- {{COLOR_INTRO}} -->
+              <!--
+                Example: Consolidating 22 hardcoded values to Optics tokens — anchored
+                to the brand hue with WCAG-safe pairings built in.
+              -->
+            </div>
+            <!-- {{COLOR_PALETTE}} -->
+            <!--
+              Use palette-group > palette-row-label + palette-row > palette-swatch structure.
+              Labels inside swatches. Add class="light-text" for light swatches.
+
+              Example:
+              <div class="palette-group">
+                <div class="palette-row-label">Primary — Brand Gold (H:46, S:97%)</div>
+                <div class="palette-row">
+                  <div class="palette-swatch light-text" style="background: hsl(46,97%,92%)"><span class="swatch-label">+8</span></div>
+                  <div class="palette-swatch light-text" style="background: hsl(46,97%,82%)"><span class="swatch-label">+5</span></div>
+                  <div class="palette-swatch light-text" style="background: hsl(46,97%,62%)"><span class="swatch-label">+2</span></div>
+                  <div class="palette-swatch" style="background: hsl(46,97%,49%)"><span class="swatch-label">base</span></div>
+                  <div class="palette-swatch" style="background: hsl(46,97%,36%)"><span class="swatch-label">−3</span></div>
+                  <div class="palette-swatch" style="background: hsl(46,97%,22%)"><span class="swatch-label">−7</span></div>
+                  <div class="palette-swatch" style="background: hsl(46,97%,14%)"><span class="swatch-label">−9</span></div>
+                </div>
+              </div>
+              <div class="palette-group">
+                <div class="palette-row-label">Neutral — Blue-Tinted Gray (H:226, S:5%)</div>
+                <div class="palette-row">
+                  <div class="palette-swatch light-text" style="background: hsl(226,5%,95%)"><span class="swatch-label">+8</span></div>
+                  <div class="palette-swatch light-text" style="background: hsl(226,5%,85%)"><span class="swatch-label">+5</span></div>
+                  <div class="palette-swatch light-text" style="background: hsl(226,5%,65%)"><span class="swatch-label">+2</span></div>
+                  <div class="palette-swatch" style="background: hsl(226,5%,50%)"><span class="swatch-label">base</span></div>
+                  <div class="palette-swatch" style="background: hsl(226,5%,35%)"><span class="swatch-label">−5</span></div>
+                  <div class="palette-swatch" style="background: hsl(226,5%,22%)"><span class="swatch-label">−7</span></div>
+                  <div class="palette-swatch" style="background: hsl(226,5%,12%)"><span class="swatch-label">−9</span></div>
+                </div>
+              </div>
+              <div class="palette-group">
+                <div class="palette-row-label">Alerts — notice · danger · warning · info</div>
+                <div class="palette-row">
+                  <div class="palette-swatch" style="background: hsl(134,50%,60%)"><span class="swatch-label">notice</span></div>
+                  <div class="palette-swatch" style="background: hsl(0,70%,58%)"><span class="swatch-label">danger</span></div>
+                  <div class="palette-swatch light-text" style="background: hsl(48,90%,55%)"><span class="swatch-label">warning</span></div>
+                  <div class="palette-swatch" style="background: hsl(217,70%,55%)"><span class="swatch-label">info</span></div>
+                </div>
+              </div>
+            -->
+          </div>
+        </section>
+
+        <!-- ==================== UX PRINCIPLES ==================== -->
+        <section>
+          <div class="slide-content">
+            <div class="section-label">UX Principles Assessment</div>
+            <p
+              style="
+                font-size: 14px;
+                color: var(--text-muted);
+                margin-bottom: 24px;
+                max-width: 680px;
+              "
+            >
+              We evaluated the application against core UX principles. Each is
+              assessed based on what we observed in the actual application.
+            </p>
+            <div class="principles-grid">
+              <!-- {{UX_PRINCIPLE_CARDS}} -->
+              <!--
+                IMPORTANT: Do NOT use academic law names (Jakob's Law, Postel's Law, etc.).
+                Use plain-language descriptions.
+
+                IMPORTANT: Every detail must be real, not assumed.
+
+                Example:
+                <div class="principle-card pass">
+                  <div class="principle-status">Aligned</div>
+                  <div class="principle-name">Familiar patterns reduce learning time</div>
+                  <div class="principle-detail">Standard web patterns used throughout — top nav,
+                    sidebar panels, form inputs. Users recognize this layout immediately.</div>
+                </div>
+
+                Include 8-12 principles. Mix: ~3-4 pass, ~4-5 opportunity, ~2-3 attention.
+              -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== RECOMMENDATION (dark slide) ==================== -->
+        <section class="slide-recommendation" data-background-color="{{DARK_BLUE_COLOR}}">
+          <div class="slide-content">
+            <div class="section-label light">Our Recommendation</div>
+            <div class="rec-headline">
+              <!-- {{REC_HEADLINE}} -->
+              <!--
+                A large, readable summary statement.
+                Example: {{PROJECT_NAME}} is a capable product with a strong technical
+                foundation. These four improvements bring the experience up to the same level.
+              -->
+            </div>
+            <div class="rec-items">
+              <!-- {{REC_ITEMS}} -->
+              <!--
+                Numbered recommendation items (01, 02, 03, 04).
+                Example:
+                <div class="rec-item">
+                  <div class="rec-item-number">01</div>
+                  <div class="rec-item-text">Rebuild the toolbar — floating panels and a
+                    streamlined tool set declutter the canvas immediately</div>
+                </div>
+                <div class="rec-item">
+                  <div class="rec-item-number">02</div>
+                  <div class="rec-item-text">Move settings into a dropdown — the right sidebar
+                    is premium canvas space, not a settings panel</div>
+                </div>
+                <div class="rec-item">
+                  <div class="rec-item-number">03</div>
+                  <div class="rec-item-text">Ship the walkthrough wizard with the next release —
+                    first-run is the highest-leverage moment in the product</div>
+                </div>
+                <div class="rec-item">
+                  <div class="rec-item-number">04</div>
+                  <div class="rec-item-text">Plan mobile as the next phase — the floating panel
+                    work sets it up as a natural extension, not a rewrite</div>
+                </div>
+              -->
+            </div>
+            <div class="footer">
+              <div class="footer-icon"></div>
+              <p>
+                RoleModel Software &middot; rolemodelsoftware.com &middot; {{DATE}}
+              </p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+    <script>
+      Reveal.initialize({
+        hash: true,
+        progress: true,
+        controls: true,
+        controlsTutorial: true,
+        slideNumber: "h.v",
+        width: 1200,
+        height: 800,
+        margin: 0.04,
+        minScale: 0.2,
+        maxScale: 1.5,
+        transition: "slide",
+        center: false,
+        // PDF export settings
+        pdfMaxPagesPerSlide: 1,
+        pdfSeparateFragments: false,
+      });
+
+      // --- Interactive embed control ---
+      // Click overlay to activate iframe, Esc or button to exit
+      function activateEmbed(overlay) {
+        var wrapper = overlay.closest('.embed-wrapper');
+        var iframe = wrapper.querySelector('iframe');
+        if (iframe.src === 'about:blank' && iframe.dataset.src) {
+          iframe.src = iframe.dataset.src;
+        }
+        iframe.style.pointerEvents = 'auto';
+        overlay.classList.add('active');
+        wrapper.classList.add('interactive');
+        Reveal.configure({ keyboard: false });
+      }
+      function deactivateEmbed(btn) {
+        var wrapper = btn.closest('.embed-wrapper');
+        var iframe = wrapper.querySelector('iframe');
+        var overlay = wrapper.querySelector('.embed-overlay');
+        iframe.style.pointerEvents = 'none';
+        overlay.classList.remove('active');
+        wrapper.classList.remove('interactive');
+        Reveal.configure({ keyboard: true });
+      }
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          var active = document.querySelector('.embed-wrapper.interactive');
+          if (active) {
+            deactivateEmbed(active.querySelector('.embed-exit'));
+            e.stopPropagation();
+          }
+        }
+      });
+      Reveal.on('slidechanged', function() {
+        document.querySelectorAll('.embed-wrapper.interactive').forEach(function(w) {
+          deactivateEmbed(w.querySelector('.embed-exit'));
+        });
+      });
+    </script>
+  </body>
+</html>
