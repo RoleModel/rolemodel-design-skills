@@ -11,28 +11,33 @@ The agent runs in a project directory and executes the full `/ux-audit` skill wo
 1. Detects tech stack and scans for hardcoded CSS values
 2. Maps values to the target design system (Optics MCP if available)
 3. Runs static accessibility analysis
-4. Generates an HTML audit report from the appropriate template
-5. Optionally pushes deliverables to Figma and generates DTCG token JSON
+4. Generates the audit report (reveal.js slide deck, Figma canvas, or scrollable HTML)
+5. Optionally publishes to Vercel/Netlify/Surge and generates DTCG token JSON
 
-At the end it reports the output file path and any Figma URLs.
+At the end it reports the output file path, published URL, and any Figma URLs.
 
 ---
 
 ## Shell Agent
 
-The simplest form. Uses the Claude Code CLI in non-interactive mode.
+The simplest form. Uses the Claude Code CLI in non-interactive mode. Supports both **interactive** (prompted) and **headless** (all args) modes.
 
 ```bash
-# scripts/run-audit-agent.sh — already included in this skill
-./scripts/run-audit-agent.sh [project-dir] [--client|--internal] [phase]
+# Interactive — prompts for project dir, audience, format, phase
+./scripts/run-audit-agent.sh
 
-# Examples
-./scripts/run-audit-agent.sh ~/Development/my-app --client
+# Headless — all arguments provided (for CI/automation)
+./scripts/run-audit-agent.sh ~/Development/my-app --client --reveal
 ./scripts/run-audit-agent.sh ~/Development/my-app --internal scan
-./scripts/run-audit-agent.sh . --client report
+./scripts/run-audit-agent.sh . --client --figma
+
+# Publishing — interactive prompts for provider and project name
+./scripts/publish-report.sh
 ```
 
-See [scripts/run-audit-agent.sh](scripts/run-audit-agent.sh) for the implementation.
+When run without arguments, both scripts prompt with colored output and sensible defaults — just press Enter to accept defaults.
+
+See [scripts/run-audit-agent.sh](scripts/run-audit-agent.sh) and [scripts/publish-report.sh](scripts/publish-report.sh) for implementations.
 
 ---
 
@@ -45,20 +50,49 @@ Configure the agent using standard environment variables and the tool list below
 ```
 You are running a UX audit on a web project. Follow the /ux-audit skill exactly.
 Complete all phases without asking for confirmation. Write findings based only on
-what you observe in the code — never fabricate. When done, report the output file
-path and any Figma URLs.
+what you observe in the code — never fabricate. NEVER create or inject CSS — copy
+the template HTML and its companion CSS file verbatim into the output directory.
+The only style you may add is a single :root { --accent } override.
+
+Output format (from .ux-audit.json "format" field):
+- "reveal" → Use report-template-reveal.html. Single self-contained file, no companion
+  CSS. Same placeholder names as client template. Supports PDF via ?print-pdf.
+- "figma" → Write directly to Figma canvas via use_figma. MUST load figma-use skill
+  first. Duplicate the template at figma.templateKey, populate section by section.
+  See references/figma-workflow.md for the complete workflow.
+- "html" → Scrollable HTML + companion CSS. Copy both files unchanged.
+
+Image sourcing:
+- Cover image + client logo: web scrape from brand.portfolioUrl (look for
+  data-framer-background-image-wrapper elements on Framer portfolio pages)
+- Section screenshots: use mcp__figma__get_screenshot when figma.fileKey is configured
+- Embed as base64 data URIs for self-contained deployment, or external URLs
+
+When done, report the output file path, published URL (if any), and Figma URLs.
 ```
 
 ### User message
 
 ```
-/ux-audit --client
+/ux-audit --client --reveal
 ```
 
 Or for a specific phase:
 
 ```
 /ux-audit scan --internal
+```
+
+For Figma canvas output:
+
+```
+/ux-audit --client --figma
+```
+
+To publish after generating:
+
+```
+/ux-audit publish
 ```
 
 ### Required tools
@@ -72,8 +106,8 @@ Read, Glob, Grep
 # Report output (write to outputDir only)
 Write
 
-# Token generation + HTTP server for Figma export
-Bash(node:*), Bash(python3:*), Bash(mkdir:*), Bash(lsof:*), Bash(open:*)
+# Token generation + HTTP server + publishing
+Bash(node:*), Bash(npx:*), Bash(python3:*), Bash(mkdir:*), Bash(lsof:*), Bash(open:*), Bash(curl:*)
 
 # Design system token lookup + contrast checking
 mcp__optics__search_tokens
@@ -84,15 +118,22 @@ mcp__optics__get_component_tokens
 mcp__optics__get_token
 mcp__optics__validate_token_usage
 
-# Figma — design inspection + report export
+# Figma — design inspection + canvas write + report export
 mcp__figma__get_design_context
 mcp__figma__get_screenshot
 mcp__figma__get_metadata
-mcp__figma__generate_figma_design
+mcp__figma__use_figma              # Direct canvas write (MUST load figma-use skill first)
+mcp__figma__search_design_system   # Discover components, variables, styles
+mcp__figma__create_new_file        # Duplicate template for new audits
+mcp__figma__generate_figma_design  # HTML-to-Figma fallback
 mcp__figma__get_variable_defs
 
-# Optional — for fetching case study URLs
+# Web scraping — cover images, client logos, case study context
 WebFetch, WebSearch
+
+# Skills — must be loaded before specific tool calls
+Skill(figma-use)                   # MANDATORY before every use_figma call
+Skill(figma-generate-design)       # For section-by-section Figma assembly
 ```
 
 ### Settings
@@ -108,8 +149,11 @@ cwd: <project-dir> # Set to the project root before invoking
 
 The only writes the agent makes:
 - `.ux-audit.json` — config, created on first run if missing
-- `{outputDir}/ux-audit-report.html` — the report
+- `{outputDir}/ux-audit-report.html` — the report (HTML/reveal format)
+- `{outputDir}/report-template*.css` — companion CSS file copied verbatim (HTML format only, never modified)
 - `{outputDir}/light.tokens.json` + `dark.tokens.json` — DTCG token files (Phase 5 only)
+- Figma canvas writes via `use_figma` (Figma format only — writes to a duplicated template file)
+- Published URL output (optional, when `/ux-audit publish` is invoked)
 
 For fully autonomous runs, scope `Write` to `{outputDir}/*` and `.ux-audit.json` only.
 

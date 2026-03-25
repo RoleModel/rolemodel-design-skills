@@ -1,113 +1,69 @@
-# Figma MCP Integration Workflow
+# Figma Canvas API Workflow
 
-How to push the audit report HTML into Figma using `mcp__figma__generate_figma_design`.
+How to build UX audit reports directly on the Figma canvas using `use_figma` and the Figma Plugin API.
 
 ## Overview
 
-The Figma MCP tool captures a web page and converts it into a Figma design. The workflow requires:
-1. The report HTML served via a local HTTP server
-2. A JavaScript capture snippet injected into the browser
-3. Polling for capture completion
+- Figma is a first-class output target alongside HTML reveal.js
+- The `use_figma` MCP tool executes JavaScript against the Figma Plugin API
+- A Figma template file provides the visual structure — the agent populates it with audit content
+- The `figma-use` skill **MUST** be loaded before every `use_figma` call
+- The `figma-generate-design` skill handles section-by-section assembly
 
-## Step-by-Step
+## Figma Template
 
-### 1. Get the Capture Snippet
+- **Template file key**: `iyfRvWyTHSbNYtpBcjuvGg`
+- **Page name**: "Figma Template & Example Audit"
+- Contains three layouts:
+  1. **Client scrollable document** — 1921px wide, node `1:1109`
+  2. **Client slide deck** — 10 individual 1390px slide frames, node `1:1506`
+  3. **Internal technical audit** — 1428px wide, node `8:2474`
+- The agent duplicates the template file for each new audit, then replaces placeholder content with real findings
 
-Call `mcp__figma__generate_figma_design` WITHOUT a `captureId`:
+## Workflow Steps
 
-```
-mcp__figma__generate_figma_design({})
-```
+### Step 1: Duplicate Template
 
-This returns:
-- A JavaScript snippet to run in the browser
-- A list of recent Figma files (for `existingFile` mode)
-- A list of available plans (for `newFile` mode)
+Use `create_new_file` or duplicate the template to create a project-specific file. This gives the audit its own Figma file while preserving the original template for reuse.
 
-### 2. Choose Output Mode
+### Step 2: Discover Design System
 
-Ask the user (or use config from `.ux-audit.json`):
+Use `search_design_system` to find available components, variables, and styles in the template. This reveals the building blocks (color tokens, text styles, reusable components) that the template provides.
 
-- **`newFile`**: Creates a new Figma file. Requires `planKey` (team/org) and `fileName`.
-- **`existingFile`**: Adds to an existing file. Requires `fileKey` and optionally `nodeId`.
-- **`clipboard`**: Copies to clipboard for manual paste.
+### Step 3: Populate Content Section by Section
 
-Call again with the chosen mode:
+Use `use_figma` to manipulate the canvas directly:
 
-```
-mcp__figma__generate_figma_design({
-  outputMode: "newFile",
-  planKey: "team-key-from-list",
-  fileName: "ProjectName UX Audit"
-})
-```
+- Update text nodes with audit findings
+- Set color swatches to the project's actual palette
+- Insert screenshots (from `get_screenshot` or web scraping)
+- Update stat numbers and labels
 
-or
+> Remember: load the `figma-use` skill before each `use_figma` call.
 
-```
-mcp__figma__generate_figma_design({
-  outputMode: "existingFile",
-  fileKey: "gnJ9S1Bf1o8cWIxKpCy1Ec"
-})
-```
+### Step 4: Screenshot Sourcing
 
-This returns a `captureId` and the JS snippet.
+- **Cover image + client logo**: Web scrape from the client's portfolio page (look for `data-framer-background-image-wrapper` elements)
+- **Section mockups**: Use `get_screenshot(nodeId, fileKey)` to capture redesign frames from the project's Figma file
+- **Current state screenshots**: Capture from `appUrl` using browser automation
 
-### 3. Serve the Report Locally
+### Step 5: Export
 
-Start a simple HTTP server:
+- Use `get_screenshot` to export individual slides as PNGs
+- Use `export-design` for PDF export
+- Link directly to the Figma file for interactive viewing
 
-```bash
-cd {outputDir}
-python3 -m http.server 8765
-```
+## HTML Reveal.js (Web Deploy Path)
 
-The report will be accessible at `http://localhost:8765/ux-audit-report.html`.
+The HTML reveal.js template remains the primary web-deployable format:
 
-### 4. User Opens the Capture URL
+- Images sourced from Figma via `get_screenshot` are embedded as base64 data URIs or external URLs
+- Deploy via `publish-report.sh` to Vercel/Netlify/Surge
+- PDF export via `?print-pdf` query parameter
 
-Tell the user to open:
+## Token JSON Import
 
-```
-http://localhost:8765/ux-audit-report.html#figmacapture&figmadelay=2000
-```
-
-The `#figmacapture` hash triggers the Figma capture snippet. The `figmadelay=2000` gives the page 2 seconds to fully render before capture.
-
-Alternatively, add the capture script tag to the HTML:
-```html
-<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
-```
-
-The user should see a Figma capture toast/overlay appear in their browser.
-
-### 5. Poll for Completion
-
-Once the user confirms the capture toast appeared, call:
-
-```
-mcp__figma__generate_figma_design({
-  captureId: "the-capture-id-from-step-2"
-})
-```
-
-This polls until the capture completes and returns the Figma file URL.
-
-### 6. Stop the Server
-
-```bash
-kill $(lsof -ti:8765)
-```
-
-## Error Handling
-
-- **Plugin not connected**: The user needs the html.to.design Figma plugin active. Guide them to install it from the Figma Community.
-- **Capture timeout**: If polling times out, the page may be too large. Try reducing content or increasing `figmadelay`.
-- **Permission error**: The user must have edit access to the target Figma file.
-
-## Token JSON Import (Separate Step)
-
-DTCG token JSON files (`light.tokens.json`, `dark.tokens.json`) cannot be pushed via the MCP tool. They must be imported manually:
+DTCG token JSON files (`light.tokens.json`, `dark.tokens.json`) can be imported into Figma:
 
 1. Open the target Figma file
 2. Go to **Local Variables** panel
@@ -116,3 +72,15 @@ DTCG token JSON files (`light.tokens.json`, `dark.tokens.json`) cannot be pushed
 5. Choose "Create new collection" or merge into existing
 
 See [dtcg-format.md](dtcg-format.md) for the token file format.
+
+## MCP Tools Reference
+
+| Tool | Purpose |
+|---|---|
+| `use_figma` | Execute Plugin API JavaScript (MUST load `figma-use` skill first) |
+| `get_design_context` | Read node properties and design context |
+| `get_metadata` | Get node structure overview |
+| `get_screenshot` | Export node as image |
+| `search_design_system` | Find components, variables, styles |
+| `get_variable_defs` | Read variable definitions |
+| `create_new_file` | Create a new Figma file |
