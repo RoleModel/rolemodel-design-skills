@@ -237,6 +237,36 @@ Figma MCP tool calls are **rate-limited by plan** — not billed per request, bu
 
 **Goal**: Identify the project's tech stack and scan for all hardcoded values.
 
+### Pre-flight: Locate the Project
+
+If the current working directory doesn't look like a project (no `Gemfile`, `package.json`, or source files), ask the user:
+
+*"I don't see a project here. What's the project name?"*
+
+Then attempt to find it:
+
+1. **Search locally** — check common paths:
+   ```bash
+   ls -d ~/Development/{name} ~/projects/{name} ~/code/{name} 2>/dev/null
+   ```
+
+2. **Search GitHub** — if not found locally, search the org:
+   ```bash
+   gh repo list RoleModel --limit 100 --json name,url | jq '.[] | select(.name | test("name"; "i"))'
+   ```
+   If found, offer to clone it:
+   ```
+   Found "RoleModel/{name}" on GitHub. Clone it to ~/Development/{name}? (yes/no)
+   ```
+   Clone with:
+   ```bash
+   gh repo clone RoleModel/{name} ~/Development/{name}
+   ```
+
+3. **If nothing found** — ask the user for the full path or repo URL.
+
+Once the project directory is confirmed, `cd` into it and proceed.
+
 ### Steps
 
 1. **Detect tech stack** by checking for:

@@ -88,12 +88,63 @@ else
   FIGMA_KEY="${5:-}"
 fi
 
-# --- Resolve absolute path ---
-PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+# --- Resolve project directory ---
+if [ -d "$PROJECT_DIR" ]; then
+  PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
+else
+  # Not a valid path — treat as a project name and search for it
+  PROJECT_NAME="$PROJECT_DIR"
+  printf "${DIM}  Looking for '%s'...${RESET}\n" "$PROJECT_NAME"
 
-if [ ! -d "$PROJECT_DIR" ]; then
-  printf "${YELLOW}  Error: directory not found: %s${RESET}\n" "$PROJECT_DIR" >&2
-  exit 1
+  # 1. Search common local paths
+  FOUND_DIR=""
+  for BASE in ~/Development ~/projects ~/code; do
+    MATCH=$(find "$BASE" -maxdepth 1 -iname "$PROJECT_NAME" -type d 2>/dev/null | head -1)
+    if [ -n "$MATCH" ]; then
+      FOUND_DIR="$MATCH"
+      break
+    fi
+  done
+
+  if [ -n "$FOUND_DIR" ]; then
+    printf "${GREEN}  ✓ Found locally: %s${RESET}\n" "$FOUND_DIR"
+    PROJECT_DIR="$FOUND_DIR"
+  else
+    # 2. Search GitHub
+    if command -v gh &>/dev/null; then
+      printf "${DIM}  Not found locally. Searching GitHub...${RESET}\n"
+      GH_MATCH=$(gh repo list RoleModel --limit 200 --json name,url 2>/dev/null | python3 -c "
+import json, sys, re
+repos = json.load(sys.stdin)
+for r in repos:
+    if re.search('$PROJECT_NAME', r['name'], re.IGNORECASE):
+        print(r['name']); break
+" 2>/dev/null || echo "")
+
+      if [ -n "$GH_MATCH" ]; then
+        CLONE_DIR="$HOME/Development/$GH_MATCH"
+        printf "${GREEN}  ✓ Found on GitHub: RoleModel/%s${RESET}\n" "$GH_MATCH"
+        printf "${BLUE}${BOLD}  Clone to %s? ${RESET}${GREEN}[yes]${RESET}${BLUE}: ${RESET}" "$CLONE_DIR"
+        read -r CONFIRM
+        CONFIRM="${CONFIRM:-yes}"
+        if [ "$CONFIRM" = "yes" ] || [ "$CONFIRM" = "y" ]; then
+          gh repo clone "RoleModel/$GH_MATCH" "$CLONE_DIR"
+          PROJECT_DIR="$CLONE_DIR"
+          printf "${GREEN}  ✓ Cloned.${RESET}\n"
+        else
+          printf "${YELLOW}  Skipped. Please provide the full project path.${RESET}\n"
+          exit 1
+        fi
+      else
+        printf "${YELLOW}  ✗ '%s' not found locally or on GitHub.${RESET}\n" "$PROJECT_NAME" >&2
+        exit 1
+      fi
+    else
+      printf "${YELLOW}  ✗ Directory not found: %s${RESET}\n" "$PROJECT_DIR" >&2
+      printf "${YELLOW}    Install GitHub CLI (gh) to search repos automatically.${RESET}\n" >&2
+      exit 1
+    fi
+  fi
 fi
 
 # --- Summary ---
