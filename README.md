@@ -1,59 +1,40 @@
 ![UI/UX Audit Skill](https://ik.imagekit.io/dtunrco/Ox_TPIFD9IbLFwUwSkYoe4BJ6CGJWo-ba19G1ZGXNwI.png)
 
-# UX Audit Skill — Installation Guide
+# UX Audit Skill
 
-## Prerequisites
+Run structured UX/UI audits on web projects with Claude Code. Scans for hardcoded CSS, accessibility issues, and design token gaps. Outputs to reveal.js slide decks, Figma canvas, or scrollable HTML.
 
-- **Claude Code CLI** (`claude`) — [claude.ai/code](https://claude.ai/code)
-- **Figma MCP server** — configured in your Claude MCP settings. Used for `mcp__figma__*` tools throughout the audit.
-- **Optics MCP server** (optional, recommended) — `mcp__optics__*` tools enable automatic token mapping and contrast checking. Without it the skill falls back to grep-based analysis.
-- **Node.js 18+** — required for token generation scripts
-
----
-
-## Install from rolemodel-design-skills
-
-### 1. Clone the repo (if you haven't already)
+## Quick Start
 
 ```bash
-git clone git@github.com:RoleModel/rolemodel-design-skills.git /path/to/rolemodel-design-skills
+git clone git@github.com:RoleModel/rolemodel-design-audit.git
+cd rolemodel-design-audit
+./scripts/setup.sh
 ```
 
-### 2. Symlink the skill into Claude Code
+The setup script checks everything, installs what it can, and symlinks the skill into Claude Code. When it finishes, open Claude Code in any project and type `/ux-audit`.
 
-```bash
-ln -s /path/to/rolemodel-design-skills/skills/ux-audit ~/.claude/skills/ux-audit
-```
+## What the Setup Script Does
 
-Verify it's available — restart Claude Code and check that `/ux-audit` appears in skill completions.
+1. **Checks core dependencies** — Claude Code CLI, Node.js 18+
+2. **Checks optional tools** — ripgrep (for CSS scanning), GitHub CLI (for project search)
+3. **Symlinks the skill** into `~/.claude/skills/ux-audit`
+4. **Checks Figma MCP** — detects the Figma plugin or manual MCP config
+5. **Sets script permissions** — makes all shell scripts executable
 
-### 3. Configure MCP servers
-
-In your `~/.claude/mcp.json` (or equivalent), ensure you have the Figma and Optics servers configured:
-
-```json
-{
-  "mcpServers": {
-    "figma": {
-      "command": "npx",
-      "args": ["-y", "@figma/mcp-server"],
-      "env": { "FIGMA_ACCESS_TOKEN": "YOUR_TOKEN" }
-    },
-    "optics": {
-      "command": "npx",
-      "args": ["-y", "@rolemodel/optics-mcp"]
-    }
-  }
-}
-```
-
----
+If anything is missing, the script tells you exactly what to install and how.
 
 ## Per-project Setup
 
-### 1. Create `.ux-audit.json` in the project root
+Run `/ux-audit` in a project directory. Claude will ask a few questions and create `.ux-audit.json` for you:
 
-Run `/ux-audit` and Claude will prompt you for answers and create the file, or create it manually:
+- **Audience** — `"client"` (polished, narrative) or `"internal"` (direct, technical)
+- **Brand colors** — primary hue/saturation from the project
+- **Design system** — defaults to `@rolemodel/optics`, works with any system
+- **Figma file key** — for canvas output (optional)
+- **Case study URL** — for cover images and narrative context (optional)
+
+Or create `.ux-audit.json` manually:
 
 ```json
 {
@@ -82,48 +63,46 @@ Run `/ux-audit` and Claude will prompt you for answers and create the file, or c
 }
 ```
 
-**Key fields:**
-- `audience` — `"client"` or `"internal"`. This changes everything: tone, report structure, finding language.
-- `brand.caseStudyUrl` — if set, Claude fetches the case study to ground the "Then" section in real context and pull the hero image.
-- `figma.fileKey` — leave `null` to create a new file, or paste an existing key from a Figma URL.
-
-### 2. Run the audit
+## Usage
 
 ```bash
-# Full audit (all 5 phases)
+# Full audit — scans, maps tokens, audits, walks findings interactively
 /ux-audit
 
-# Individual phases
-/ux-audit scan
-/ux-audit tokens
-/ux-audit accessibility
+# Generate client report (after design work is done)
 /ux-audit report
-/ux-audit figma
+
+# Individual phases
+/ux-audit scan        # Tech stack + codebase scan
+/ux-audit tokens      # Design token mapping
+/ux-audit audit       # Heuristic audit (10 sections)
+/ux-audit review      # Interactive finding review
+/ux-audit figma       # Figma deliverables + token JSON
+/ux-audit publish     # Deploy to Vercel/Netlify/Surge
 ```
 
-### 3. Push to Figma
-
-After Phase 4 generates the HTML report:
+### Shell Scripts (Automation)
 
 ```bash
-/ux-audit figma
+# Interactive — prompts for project, audience, format
+./skills/ux-audit/scripts/run-audit-agent.sh
+
+# Headless — for CI or automation
+./skills/ux-audit/scripts/run-audit-agent.sh ~/Development/my-app --client reveal
+
+# Publish report to a URL
+./skills/ux-audit/scripts/publish-report.sh
 ```
-
-This uses `mcp__figma__generate_figma_design` to push the report. Claude will start a local HTTP server, open the page in your browser, and poll for completion.
-
----
 
 ## Non-Optics Projects
 
-The skill works on any web project. When `designSystem.name` is not `"optics"`, token mapping falls back to grep-based analysis against whatever CSS/token files it finds in `node_modules` or the project. Set `designSystem.name` to match the system in use (e.g. `"tailwind"`, `"bootstrap"`, `"custom"`).
+The skill works on any web project. Set `designSystem.name` to match your system (`"tailwind"`, `"bootstrap"`, `"custom"`). Token mapping falls back to grep-based analysis when Optics MCP tools aren't available.
 
----
-
-## Updating the Skill
+## Updating
 
 ```bash
-cd /path/to/rolemodel-design-skills
+cd rolemodel-design-audit
 git pull
 ```
 
-The symlink means your Claude Code installation picks up changes immediately — no reinstall needed.
+The symlink means Claude Code picks up changes immediately.

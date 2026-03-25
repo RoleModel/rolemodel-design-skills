@@ -40,6 +40,34 @@ Output to **reveal.js** (self-contained slide deck), **Figma** (direct canvas wr
 └─────────────────────────────────────────────────┘
 ```
 
+## Prerequisites
+
+Run the setup script from the repo root — it checks everything and tells you what's missing:
+
+```bash
+./scripts/setup.sh
+```
+
+**What's needed:**
+
+| Dependency | Required? | Purpose |
+|-----------|-----------|---------|
+| Claude Code CLI | Yes | Runtime for the skill |
+| Node.js 18+ | Yes | Token generation scripts (.mjs) |
+| Figma plugin | Recommended | Screenshots, canvas writes, design inspection |
+| ripgrep (`rg`) | Optional | Powers `scan-hardcoded-values.sh` |
+| GitHub CLI (`gh`) | Optional | Project search from GitHub in `run-audit-agent.sh` |
+
+**Figma skills used by this audit:**
+
+| Skill | When used | Purpose |
+|-------|-----------|---------|
+| `figma-use` | **Every** `use_figma` call (mandatory) | Loads Plugin API context; skipping it causes hard-to-debug failures |
+| `figma-generate-design` | Phase 5–6 (Figma format) | Section-by-section canvas assembly using design system tokens |
+| `figma-create-new-file` | Phase 6 (template duplication) | Creates the project-specific audit file from the template |
+
+Without the Figma plugin, the skill still works — it skips Figma-dependent features and uses reveal.js or HTML output instead.
+
 ## Invocation
 
 Most users only need two commands — one for each session:
