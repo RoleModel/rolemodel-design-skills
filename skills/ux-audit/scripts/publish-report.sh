@@ -6,14 +6,14 @@
 #
 # Usage:
 #   ./publish-report.sh                                          # Interactive mode
-#   ./publish-report.sh [output-dir] [--provider vercel|netlify|surge] [--name project-name]
+#   ./publish-report.sh [output-dir] [--provider vercel|netlify|surge] [--name project-name] [--scope vercel-team]
 #
 # Examples:
 #   ./publish-report.sh
 #   ./publish-report.sh dev-tools/ux-audit-output
 #   ./publish-report.sh dev-tools/ux-audit-output --provider netlify
 #   ./publish-report.sh dev-tools/ux-audit-output --provider vercel --name my-app-ux-audit
-#   ./publish-report.sh ~/Development/rolemodel-ux-audit-projects/project-audits/rapid-air --provider vercel --name rapid-air-assessment
+#   ./publish-report.sh /path/to/rolemodel-ux-audit-projects/project-audits/rapid-air --provider vercel --name rapid-air-assessment --scope rolemodel-team
 #
 # Prerequisites:
 #   - Node.js installed (for npx)
@@ -97,7 +97,7 @@ if [[ "$PWD" == *"/$PROJECTS_REPO_NAME"* ]] || [[ "${1:-}" == *"/$PROJECTS_REPO_
     echo ""
   else
     printf "${YELLOW}  ⚠  Skill repo has local changes; skipping automatic git pull before publish.${RESET}\n"
-    printf "${DIM}     Finish or stash local work in ~/Development/${SKILL_REPO_NAME} if you need the latest publisher.${RESET}\n"
+    printf "${DIM}     Finish or stash local work in the skill repo if you need the latest publisher.${RESET}\n"
     echo ""
   fi
 fi
@@ -120,6 +120,7 @@ else
   OUTPUT_DIR=""
   PROVIDER="vercel"
   PROJECT_NAME=""
+  VERCEL_SCOPE=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -139,6 +140,14 @@ else
         PROJECT_NAME="${1#*=}"
         shift
         ;;
+      --scope)
+        VERCEL_SCOPE="$2"
+        shift 2
+        ;;
+      --scope=*)
+        VERCEL_SCOPE="${1#*=}"
+        shift
+        ;;
       -*)
         printf "${YELLOW}  Unknown option: %s${RESET}\n" "$1" >&2
         exit 1
@@ -156,6 +165,13 @@ else
   fi
   if [ -z "$PROJECT_NAME" ]; then
     PROJECT_NAME="$AUTO_PROJECT_NAME"
+  fi
+fi
+
+if [ -z "${VERCEL_SCOPE:-}" ] && [ -f .ux-audit.json ]; then
+  DETECTED_SCOPE=$(python3 -c "import json; print(json.load(open('.ux-audit.json')).get('publish', {}).get('scope', ''))" 2>/dev/null || echo "")
+  if [ -n "$DETECTED_SCOPE" ]; then
+    VERCEL_SCOPE="$DETECTED_SCOPE"
   fi
 fi
 
@@ -213,6 +229,9 @@ printf "${CYAN}${BOLD}  ── Deploy Configuration ─────────�
 printf "${BOLD}  Report:   ${RESET}%s\n" "$REPORT_FILE"
 printf "${BOLD}  Provider: ${RESET}%s\n" "$PROVIDER"
 printf "${BOLD}  URL slug: ${RESET}%s.vercel.app\n" "$PROJECT_NAME"
+if [ -n "${VERCEL_SCOPE:-}" ]; then
+  printf "${BOLD}  Scope:    ${RESET}%s\n" "$VERCEL_SCOPE"
+fi
 printf "${CYAN}  ─────────────────────────────────────────────${RESET}\n"
 echo ""
 
@@ -239,8 +258,12 @@ case "$PROVIDER" in
     printf "${BOLD}  Deploying to Vercel...${RESET}\n"
     # Link the temporary deploy directory to a stable project before deploying.
     # This keeps repeated publishes attached to the configured client-facing slug.
-    npx -y vercel link "$DEPLOY_DIR" --yes --project "$PROJECT_NAME" >/dev/null
-    VERCEL_OUTPUT=$(npx -y vercel deploy "$DEPLOY_DIR" --prod --yes 2>&1)
+    VERCEL_SCOPE_ARGS=()
+    if [ -n "${VERCEL_SCOPE:-}" ]; then
+      VERCEL_SCOPE_ARGS=(--scope "$VERCEL_SCOPE")
+    fi
+    npx -y vercel link "$DEPLOY_DIR" --yes --project "$PROJECT_NAME" "${VERCEL_SCOPE_ARGS[@]}" >/dev/null
+    VERCEL_OUTPUT=$(npx -y vercel deploy "$DEPLOY_DIR" --prod --yes "${VERCEL_SCOPE_ARGS[@]}" 2>&1)
     VERCEL_URL=$(echo "$VERCEL_OUTPUT" | grep -oE 'https://[^ ]+\.vercel\.app' | tail -1)
     if [ -n "$VERCEL_URL" ]; then
       echo ""
