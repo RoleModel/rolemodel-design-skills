@@ -63,7 +63,9 @@ The HTML reveal.js template remains the primary web-deployable format:
 
 ## Token JSON Import
 
-DTCG token JSON files (`light.tokens.json`, `dark.tokens.json`) can be imported into Figma:
+DTCG token JSON files (`light.tokens.json`, `dark.tokens.json`) are optional. Generate them only when the user needs importable Figma Variables, the target Figma file does not already contain the needed variables, or the audit deliverable includes a formal token migration artifact. For normal reports, token mapping tables are enough and token JSON should be skipped.
+
+When generated, DTCG token JSON files can be imported into Figma:
 
 1. Open the target Figma file
 2. Go to **Local Variables** panel

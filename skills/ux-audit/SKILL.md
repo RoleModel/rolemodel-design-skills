@@ -10,7 +10,7 @@ Run structured UX/UI audits on web projects in **two sessions**:
 1. **Discovery & Review** — Scan the codebase, identify findings, and walk through them interactively with the team. This is an internal conversation — collaborative, iterative, and thorough.
 2. **Client Report** — After design work is complete (Figma mockups, prototypes), come back to generate the polished client-facing deliverable with real screenshots, video walkthroughs, and interactive embeds.
 
-Output to **reveal.js** (component-based slide deck), **Figma** (direct canvas write), or **scrollable HTML**. Publish to Vercel, Netlify, or Surge. Generate DTCG token JSON for Figma Variables import.
+Output to **reveal.js** (component-based slide deck), **Figma** (direct canvas write), or **scrollable HTML**. Publish to Vercel, Netlify, or Surge. Generate DTCG token JSON only when the audit explicitly needs importable token artifacts.
 
 ## Workflow Overview
 
@@ -35,7 +35,7 @@ Output to **reveal.js** (component-based slide deck), **Figma** (direct canvas w
 │           Pull screenshots from Figma designs    │
 │           Add video walkthrough + interactive    │
 │           embed if available                     │
-│  Phase 6: Figma deliverables + token JSON       │
+│  Phase 6: Figma deliverables + optional tokens  │
 │  Phase 7: Publish to web                        │
 └─────────────────────────────────────────────────┘
 ```
@@ -89,7 +89,7 @@ For power users, CI, or re-running a specific step:
 /ux-audit audit         # Phase 3 only: heuristic audit (10 sections)
 /ux-audit review        # Phase 4 only: interactive finding review
 /ux-audit report        # Phase 5 only: generate the client report
-/ux-audit figma         # Phase 6 only: Figma deliverables + token JSON
+/ux-audit figma         # Phase 6 only: Figma deliverables + optional token JSON
 /ux-audit publish       # Phase 7 only: deploy to Vercel/Netlify/Surge
 ```
 
@@ -227,6 +227,17 @@ The `publish` section controls static deployment:
 - `projectName` — override the deployed project name (default: `{brand.name}-assessment` slugified). This becomes the Vercel subdomain, e.g. `rapidair-assessment.vercel.app` — keep it clean and client-facing, no internal tool names.
 
 When `designSystem.name` is `"optics"`, use the Optics MCP tools (`mcp__optics__*`) for token lookups, component mapping, and contrast checking. For any other design system, fall back to Grep/Read-based analysis.
+
+### Token artifact rule
+
+Phase 2 always maps observed values to the target design system because that helps the audit explain drift, contrast risk, and remediation effort. **Do not assume new token files are needed.** DTCG token JSON generation is conditional and should only run when at least one of these is true:
+
+- the user explicitly asks for Figma Variables import files;
+- `.ux-audit.json` has `"tokens": { "generate": true }`;
+- the target design system does not already exist in the destination Figma file and the team needs a portable token artifact;
+- the audit deliverable includes a formal token migration package, not just a report.
+
+Skip token JSON generation when the product already has an adequate design system and the audit only needs mapping tables, remediation notes, screenshots, or a client report. When skipping, say: `Token JSON skipped — mapping documented in report; no importable token artifact requested.`
 
 ### Figma MCP Usage Limits
 
@@ -832,19 +843,25 @@ If `reviewed-findings.json` doesn't exist, warn the user: *"No reviewed findings
 
 ## Phase 6: Figma Deliverables
 
-**Goal**: Generate DTCG token JSON and write the audit report to Figma's canvas.
+**Goal**: Write the audit report to Figma's canvas when requested, and generate DTCG token JSON only when the token artifact rule says it is needed.
 
 **⚠ Usage check**: Before starting, estimate Figma MCP calls needed (see [Figma MCP Usage Limits](#figma-mcp-usage-limits)) and confirm with the user. A full canvas write typically uses 15–35 calls. Token JSON generation uses zero Figma calls.
 
 ### Steps
 
-1. **Generate DTCG token JSON files**:
+1. **Decide whether token JSON is needed**:
+   - Check `.ux-audit.json` for `tokens.generate === true`
+   - Check whether the user explicitly requested Figma Variables import files or a token migration package
+   - Check whether the destination Figma file already has the needed variables/styles
+   - If none apply, skip token generation and document the reason
+
+2. **Generate DTCG token JSON files only if needed**:
    - If Optics: run `node ${CLAUDE_SKILL_ROOT}/scripts/generate-figma-variables.mjs --config .ux-audit.json --output {outputDir}`
    - This generates `light.tokens.json` and `dark.tokens.json`
    - See [references/dtcg-format.md](references/dtcg-format.md) for format details
    - Tell user: "Import these via Figma > Local Variables > Import"
 
-2. **Write report to Figma canvas** (if format is `"figma"` or explicitly requested):
+3. **Write report to Figma canvas** (if format is `"figma"` or explicitly requested):
 
    Follow the workflow in [references/figma-workflow.md](references/figma-workflow.md):
 
@@ -864,17 +881,15 @@ If `reviewed-findings.json` doesn't exist, warn the user: *"No reviewed findings
    - Guide user to open the URL with `#figmacapture&figmadelay=2000`
    - Poll with captureId once user confirms the capture toast appeared
 
-3. **Report deliverables**:
+4. **Report deliverables**:
    ```
-   Phase 5 Complete: Figma Deliverables
-   Token files:
-     {outputDir}/light.tokens.json (N tokens)
-     {outputDir}/dark.tokens.json (N tokens)
+   Phase 6 Complete: Figma Deliverables
+   Token files: [generated paths or "skipped — mapping documented in report; no importable token artifact requested"]
    Audit report: {outputDir}/ux-audit-report.html
    Figma: [URL or "skipped"]
 
    Next steps:
-     - Import token JSON via Figma > Local Variables > Import
+     - If token files were generated: import via Figma > Local Variables > Import
      - Publish report: ./scripts/publish-report.sh
    ```
 

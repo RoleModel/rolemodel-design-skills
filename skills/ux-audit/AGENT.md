@@ -12,7 +12,7 @@ The agent runs in a project directory and executes the full `/ux-audit` skill wo
 2. Maps values to the target design system (Optics MCP if available)
 3. Runs static accessibility analysis
 4. Generates the audit report (reveal.js slide deck, Figma canvas, or scrollable HTML)
-5. Optionally publishes to Vercel/Netlify/Surge and generates DTCG token JSON
+5. Optionally publishes to Vercel/Netlify/Surge and generates DTCG token JSON only when requested or configured
 
 At the end it reports the output file path, published URL, and any Figma URLs.
 
@@ -70,7 +70,13 @@ Image sourcing:
 - Section screenshots: use mcp__figma__get_screenshot when figma.fileKey is configured
 - Embed as base64 data URIs for self-contained deployment, or external URLs
 
-When done, report the output file path, published URL (if any), and Figma URLs.
+Token JSON rule:
+- Phase 2 token mapping is always useful as audit evidence.
+- Do not generate light.tokens.json/dark.tokens.json by default.
+- Generate DTCG token JSON only when .ux-audit.json has tokens.generate=true, the user explicitly asks for Figma Variables import files, or the deliverable includes a formal token migration artifact.
+- If skipped, report: "Token JSON skipped — mapping documented in report; no importable token artifact requested."
+
+When done, report the output file path, published URL (if any), Figma URLs, and whether token JSON was generated or skipped.
 ```
 
 ### User message
@@ -153,7 +159,7 @@ The only writes the agent makes:
 - `.ux-audit.json` — config, created on first run if missing
 - `{outputDir}/ux-audit-report.html` — the report (HTML/reveal format)
 - `{outputDir}/report-template*.css` — companion CSS file copied verbatim (HTML format only, never modified)
-- `{outputDir}/light.tokens.json` + `dark.tokens.json` — DTCG token files (Phase 5 only)
+- `{outputDir}/light.tokens.json` + `dark.tokens.json` — optional DTCG token files (Phase 6 only, generated only when the token artifact rule applies)
 - Figma canvas writes via `use_figma` (Figma format only — writes to a duplicated template file)
 - Published URL output (optional, when `/ux-audit publish` is invoked)
 
