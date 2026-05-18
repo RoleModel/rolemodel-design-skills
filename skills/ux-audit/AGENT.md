@@ -55,8 +55,10 @@ the template HTML and its companion CSS file verbatim into the output directory.
 The only style you may add is a single :root { --accent } override.
 
 Output format (from .ux-audit.json "format" field):
-- "reveal" → Use report-template-reveal.html. Single self-contained file, no companion
-  CSS. Same placeholder names as client template. Supports PDF via ?print-pdf.
+- "reveal" → Use references/revealjs-template/index.html plus the bundled
+  audit-kit.js, reveal-audit-theme.css, local-fonts.css, RMS-lcon.svg, and fonts/. Compose
+  content with the provided web components; do not recreate deck CSS. Supports
+  PDF via ?print-pdf.
 - "figma" → Write directly to Figma canvas via use_figma. MUST load figma-use skill
   first. Duplicate the template at figma.templateKey, populate section by section.
   See references/figma-workflow.md for the complete workflow.

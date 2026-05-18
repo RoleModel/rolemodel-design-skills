@@ -13,6 +13,7 @@
 #   ./publish-report.sh dev-tools/ux-audit-output
 #   ./publish-report.sh dev-tools/ux-audit-output --provider netlify
 #   ./publish-report.sh dev-tools/ux-audit-output --provider vercel --name my-app-ux-audit
+#   ./publish-report.sh ~/Development/rolemodel-ux-audit-projects/project-audits/rapid-air --provider vercel --name rapid-air-assessment
 #
 # Prerequisites:
 #   - Node.js installed (for npx)
@@ -63,6 +64,15 @@ echo ""
 AUTO_OUTPUT_DIR="dev-tools/ux-audit-output"
 AUTO_PROJECT_NAME="assessment"
 
+# Keep the publisher current when it is used against the external projects repo.
+# The projects repo is intentionally separate so project artifacts do not bloat the
+# lightweight skill checkout, but publishing should still run from the latest skill
+# implementation when possible.
+PROJECTS_REPO_NAME="rolemodel-ux-audit-projects"
+SKILL_REPO_NAME="rolemodel-design-audit"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
 if [ -f .ux-audit.json ]; then
   DETECTED_DIR=$(python3 -c "import json; print(json.load(open('.ux-audit.json')).get('outputDir', ''))" 2>/dev/null || echo "")
   if [ -n "$DETECTED_DIR" ]; then
@@ -76,6 +86,19 @@ if [ -f .ux-audit.json ]; then
   elif [ -n "$DETECTED_BRAND" ]; then
     # Default: "{brand}-assessment" — clean, client-facing URL
     AUTO_PROJECT_NAME=$(echo "$DETECTED_BRAND-assessment" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
+  fi
+fi
+
+# --- Publish context sync ---
+if [[ "$PWD" == *"/$PROJECTS_REPO_NAME"* ]] || [[ "${1:-}" == *"/$PROJECTS_REPO_NAME/"* ]]; then
+  if git -C "$SKILL_REPO_ROOT" diff --quiet && git -C "$SKILL_REPO_ROOT" diff --cached --quiet; then
+    printf "${DIM}  Publishing from the projects catalog. Syncing the skill repo first...${RESET}\n"
+    git -C "$SKILL_REPO_ROOT" pull --ff-only
+    echo ""
+  else
+    printf "${YELLOW}  ⚠  Skill repo has local changes; skipping automatic git pull before publish.${RESET}\n"
+    printf "${DIM}     Finish or stash local work in ~/Development/${SKILL_REPO_NAME} if you need the latest publisher.${RESET}\n"
+    echo ""
   fi
 fi
 
@@ -201,14 +224,22 @@ trap 'rm -rf "$DEPLOY_DIR"' EXIT
 cp "$REPORT_FILE" "$DEPLOY_DIR/index.html"
 
 # Copy all assets alongside the report (images, video, CSS, SVGs)
-for ASSET in "$OUTPUT_DIR"/*.{png,jpg,jpeg,webp,mp4,webm,svg,css}; do
+for ASSET in "$OUTPUT_DIR"/*.{png,jpg,jpeg,webp,mp4,webm,svg,css,js}; do
   [ -f "$ASSET" ] && cp "$ASSET" "$DEPLOY_DIR/"
+done
+
+# Copy nested asset directories used by the component-based reveal.js template.
+for ASSET_DIR in "$OUTPUT_DIR"/fonts; do
+  [ -d "$ASSET_DIR" ] && cp -R "$ASSET_DIR" "$DEPLOY_DIR/"
 done
 
 # --- Deploy ---
 case "$PROVIDER" in
   vercel)
     printf "${BOLD}  Deploying to Vercel...${RESET}\n"
+    # Link the temporary deploy directory to a stable project before deploying.
+    # This keeps repeated publishes attached to the configured client-facing slug.
+    npx -y vercel link "$DEPLOY_DIR" --yes --project "$PROJECT_NAME" >/dev/null
     VERCEL_OUTPUT=$(npx -y vercel deploy "$DEPLOY_DIR" --prod --yes 2>&1)
     VERCEL_URL=$(echo "$VERCEL_OUTPUT" | grep -oE 'https://[^ ]+\.vercel\.app' | tail -1)
     if [ -n "$VERCEL_URL" ]; then

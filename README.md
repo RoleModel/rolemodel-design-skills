@@ -4,7 +4,9 @@
 
 Run structured UX/UI audits on web projects with Claude Code. Scans for hardcoded CSS, accessibility issues, and design token gaps. Outputs to reveal.js slide decks, Figma canvas, or scrollable HTML.
 
-## Quick Start
+## Installation
+
+### Option 1: Setup Script (Recommended — Claude Code)
 
 ```bash
 git clone git@github.com:RoleModel/rolemodel-design-audit.git
@@ -12,7 +14,15 @@ cd rolemodel-design-audit
 ./scripts/setup.sh
 ```
 
-The setup script checks everything, installs what it can, and symlinks the skill into Claude Code. When it finishes, open Claude Code in any project and type `/ux-audit`.
+The setup script checks prerequisites, symlinks the skill into `~/.claude/skills/ux-audit`, and tells you exactly what to install if anything is missing. After it finishes, open Claude Code in any project and type `/ux-audit`.
+
+### Option 2: Manual Symlink
+
+```bash
+ln -s "$(pwd)/skills/ux-audit" ~/.claude/skills/ux-audit
+```
+
+Or for opencode, place a symlink (or copy) into `~/.config/opencode/skills/ux-audit/`.
 
 ## What the Setup Script Does
 
@@ -23,6 +33,56 @@ The setup script checks everything, installs what it can, and symlinks the skill
 5. **Sets script permissions** — makes all shell scripts executable
 
 If anything is missing, the script tells you exactly what to install and how.
+
+## Source of Truth and Repo Layout
+
+This repository is the maintained source of truth for `/ux-audit`.
+
+- **Claude Code** uses a symlink created by `./scripts/setup.sh`, so pulling this repo updates that install immediately.
+- **Other AI CLIs** (Codex, Cursor, etc.) can use a copy or symlink. Refresh from this repo when the workflow is intentionally promoted.
+- **Project examples and demos** live in the sibling `rolemodel-ux-audit-projects` repo so this skill repo stays light to clone.
+
+```text
+skills/ux-audit/
+  SKILL.md                 # Workflow contract — the /ux-audit command
+  AGENT.md                 # Headless/autonomous agent configuration
+  RETROSPECTIVE.md         # Development lessons and design decisions
+  scripts/
+    run-audit-agent.sh     # Interactive or headless audit runner
+    publish-report.sh      # Vercel/Netlify/Surge publisher
+    scan-hardcoded-values.sh  # Grep wrapper for Phase 1
+    generate-figma-variables.mjs  # Optics → DTCG token JSON
+    generate-all-tokens.mjs       # Full token generation pipeline
+  references/
+    html-template/         # Scrollable HTML report templates (internal, client, magazine)
+    revealjs-template/     # Reveal.js slide deck bundle + audit-kit web components
+    figma-workflow.md      # Figma MCP canvas-write workflow
+    tone-guide.md          # Language rules for internal vs client mode
+    team-guide.md          # Client audit philosophy (Then/Now/Next)
+    severity-model.md      # Critical/High/Medium/Pattern classification
+    laws-of-ux.md          # 21 Laws of UX reference
+    audit-checklist.md     # Scan patterns for hardcoded values
+    dtcg-format.md         # DTCG token JSON specification
+    demo-recording-guide.md  # Playwright + ffmpeg demo recording workflow
+```
+
+For the farming workflow, treat the outputs as a contract:
+
+- `reveal` → copy the full `revealjs-template/` bundle and compose slides with the provided audit-kit components
+- `html` → use `html-template/` plus its companion CSS
+- `figma` → duplicate the Figma template and populate it through the documented Figma flow
+- `publish` → package the generated report and assets, then deploy through the publish script
+
+Concrete audit outputs and heavier demos belong in the separate `rolemodel-ux-audit-projects` repo. Keep static audit reports as normal folders there; use git submodules for larger demo apps so people can opt into those checkouts instead of downloading every project by default.
+
+## Updating
+
+```bash
+cd rolemodel-design-audit
+git pull
+```
+
+The symlink means Claude Code picks up changes immediately. For copied installs, re-run the copy or update the symlink target.
 
 ## Per-project Setup
 
@@ -94,15 +154,16 @@ Or create `.ux-audit.json` manually:
 ./skills/ux-audit/scripts/publish-report.sh
 ```
 
+## Publishing with Vercel
+
+The default publish path is Vercel. After a report is generated, run:
+
+```bash
+./skills/ux-audit/scripts/publish-report.sh
+```
+
+The script reads `.ux-audit.json`, packages the report and its local assets, links the temporary deploy directory to the configured Vercel project name, and deploys to production. On first use, authenticate once with `npx vercel login`; later publishes can run headlessly. Set `publish.projectName` in `.ux-audit.json` when you want a stable client-facing slug such as `rapidair-assessment`.
+
 ## Non-Optics Projects
 
 The skill works on any web project. Set `designSystem.name` to match your system (`"tailwind"`, `"bootstrap"`, `"custom"`). Token mapping falls back to grep-based analysis when Optics MCP tools aren't available.
-
-## Updating
-
-```bash
-cd rolemodel-design-audit
-git pull
-```
-
-The symlink means Claude Code picks up changes immediately.

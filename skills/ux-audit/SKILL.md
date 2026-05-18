@@ -10,7 +10,7 @@ Run structured UX/UI audits on web projects in **two sessions**:
 1. **Discovery & Review** — Scan the codebase, identify findings, and walk through them interactively with the team. This is an internal conversation — collaborative, iterative, and thorough.
 2. **Client Report** — After design work is complete (Figma mockups, prototypes), come back to generate the polished client-facing deliverable with real screenshots, video walkthroughs, and interactive embeds.
 
-Output to **reveal.js** (self-contained slide deck), **Figma** (direct canvas write), or **scrollable HTML**. Publish to Vercel, Netlify, or Surge. Generate DTCG token JSON for Figma Variables import.
+Output to **reveal.js** (component-based slide deck), **Figma** (direct canvas write), or **scrollable HTML**. Publish to Vercel, Netlify, or Surge. Generate DTCG token JSON for Figma Variables import.
 
 ## Workflow Overview
 
@@ -210,7 +210,7 @@ The `audience` field accepts `"internal"` or `"client"`. This controls:
 - Executive summary framing (stats-driven vs narrative paragraph + callout)
 
 The `format` field accepts `"reveal"` (default for client), `"figma"`, or `"html"`:
-- **`"reveal"`** — Self-contained HTML slide deck. CSS inlined, reveal.js from CDN. Shareable via URL, PDF-exportable via `?print-pdf`. Only valid with `audience: "client"`.
+- **`"reveal"`** — Component-based HTML slide deck built from the bundled `revealjs-template/` assets. Shareable via URL, PDF-exportable via `?print-pdf`. Only valid with `audience: "client"`.
 - **`"figma"`** — Direct write to Figma canvas via the Plugin API. Uses the template at `figma.templateKey` as the visual structure. The agent duplicates the template, then populates it section-by-section. Only valid with `audience: "client"`. Requires Figma Desktop MCP.
 - **`"html"`** — Scrollable single-page HTML with companion CSS file. Works for both audience modes.
 
@@ -708,18 +708,19 @@ If `reviewed-findings.json` doesn't exist, warn the user: *"No reviewed findings
 1. **Select output path** based on audience mode and format:
 
    | Audience | Format | Template | Notes |
-   |----------|--------|----------|-------|
-   | Internal | html | [report-template.html](references/report-template.html) + [.css](references/report-template.css) | Scrollable, file paths + line numbers |
-   | Client | html | [report-template-client.html](references/report-template-client.html) + [.css](references/report-template-client.css) | Scrollable, Then/Now/Next |
-   | Client | reveal | [report-template-reveal.html](references/report-template-reveal.html) | Self-contained slide deck, no companion CSS |
-   | Client | figma | [Figma template](references/figma-workflow.md) (`iyfRvWyTHSbNYtpBcjuvGg`) | Direct canvas write via Plugin API |
+    |----------|--------|----------|-------|
+    | Internal | html | [report-template.html](references/html-template/report-template.html) + [.css](references/html-template/report-template.css) | Scrollable, file paths + line numbers |
+    | Client | html | [report-template-client.html](references/html-template/report-template-client.html) + [.css](references/html-template/report-template-client.css) | Scrollable, Then/Now/Next |
+    | Client | html (magazine) | [report-template-magazine.html](references/html-template/report-template-magazine.html) + [.css](references/html-template/report-template-magazine.css) | 8.5×11 aspect-ratio slides, Figma-copyable |
+    | Client | reveal | [revealjs-template/index.html](references/revealjs-template/index.html) + bundled assets | Reusable component-based slide deck |
+    | Client | figma | [Figma template](references/figma-workflow.md) (`iyfRvWyTHSbNYtpBcjuvGg`) | Direct canvas write via Plugin API |
 
    **CRITICAL — Do not write any CSS.** For HTML formats, the CSS files are complete and final. Copy the template HTML and its companion CSS file verbatim into the output directory. The only style override allowed is:
    ```html
    <style>:root { --accent: #F5A623; }</style>
    ```
 
-   **Reveal format**: Single self-contained file — CSS inlined, reveal.js from CDN. Same `{{PLACEHOLDER}}` names as the client HTML template. Content organized into `<section>` slides. Supports PDF export via `?print-pdf` query parameter.
+   **Reveal format**: Start from [references/revealjs-template/index.html](references/revealjs-template/index.html). Copy the full `revealjs-template/` bundle into the output directory, then populate the deck by composing its audit-kit web components inside `<section>` slides. Keep `audit-kit.js`, `reveal-audit-theme.css`, `local-fonts.css`, `RMS-lcon.svg`, and `fonts/` alongside `index.html`. Supports PDF export via `?print-pdf` query parameter.
 
    **Figma format**: Load the `figma-use` skill, then use `use_figma` to write content section-by-section to a duplicate of the Figma template. See [references/figma-workflow.md](references/figma-workflow.md) for the complete workflow. The `figma-generate-design` skill handles discovering components and assembling screens.
 
@@ -788,7 +789,7 @@ If `reviewed-findings.json` doesn't exist, warn the user: *"No reviewed findings
    - Every finding has "observed" + "means" (no "benefit" or "law" labels)
    - See [references/tone-guide.md](references/tone-guide.md) for language transformation rules
 
-   **Internal mode** — populate [references/report-template.html](references/report-template.html):
+   **Internal mode** — populate [references/html-template/report-template.html](references/html-template/report-template.html):
 
    The internal report uses the same visual style as the Day 1 checklist. It IS the working audit document — the agent fills it out as it conducts the audit, then adds code scan data at the end.
 
@@ -817,10 +818,10 @@ If `reviewed-findings.json` doesn't exist, warn the user: *"No reviewed findings
 
 5. Ensure `mkdir -p {outputDir}` exists
 6. **For html format**: Copy the companion CSS file into the output directory (e.g. `{outputDir}/report-template-client.css` or `{outputDir}/report-template.css`) — do not modify it
-   **For reveal format**: No companion CSS to copy — styles are inlined in the template
+   **For reveal format**: Copy the entire `references/revealjs-template/` bundle into the output directory so `index.html`, `audit-kit.js`, `reveal-audit-theme.css`, `local-fonts.css`, `RMS-lcon.svg`, and `fonts/` stay together
 7. Write report to `{outputDir}/ux-audit-report.html`
    - html format: include a `<link rel="stylesheet">` pointing to the copied CSS file
-   - reveal format: the file is self-contained and ready to open directly
+   - reveal format: generate from the copied `revealjs-template/index.html` structure and preserve its relative asset links
 8. Tell the user the file path and suggest opening in browser
 9. If `publish` is configured in `.ux-audit.json`, inform the user they can deploy with:
    ```
@@ -906,8 +907,9 @@ At the end of Phase 5 (report generation), the skill automatically asks: *"Ready
 1. Checks if the Vercel CLI is installed — installs it if not
 2. Checks if authenticated — guides through login if not
 3. Reads `.ux-audit.json` for `outputDir` and `brand.name`
-4. Packages the report + assets (screenshots, video, SVGs) as a static site
-5. Deploys and returns the public URL (e.g., `rapidair-assessment.vercel.app`)
+4. Packages the report + assets (screenshots, video, SVGs, template CSS/JS, fonts) as a static site
+5. Links the temporary deploy directory to `publish.projectName` so repeat publishes stay on the intended Vercel project
+6. Deploys and returns the public URL (e.g., `rapidair-assessment.vercel.app`)
 
 ### First-Time Setup (handled automatically by the script)
 
@@ -957,7 +959,7 @@ Set in `.ux-audit.json` under `"publish"`:
 
 ### Notes
 
-- The reveal format works especially well for publishing — it's a single self-contained HTML file. When the report uses local assets (screenshots, video), those are copied alongside `index.html` into the deploy directory automatically.
+- The reveal format works especially well for publishing because it is a small static bundle. The publisher copies the deck HTML plus local assets (screenshots, video, template CSS/JS, and fonts) into the deploy directory automatically.
 - Published reports are static sites — no server-side code, no database, no build step
 - Each deployment creates a unique URL. Re-deploying the same project name updates the existing URL.
 - The audits repo (`rolemodel-ux-audits/`) convention is one folder per client: `rapidair/index.html`, `clientname/index.html`, etc. Each folder can be published independently.
@@ -978,7 +980,7 @@ Set in `.ux-audit.json` under `"publish"`:
 
 7. **Use the TodoWrite tool** to track progress through the phases. Mark each phase as completed when done.
 
-8. **Never create, modify, or inject CSS.** The report templates ship with companion `.css` files that define all styling. Copy the CSS file alongside the HTML into the output directory unchanged. Do not add `<style>` blocks (except the single `:root { --accent }` override), inline `style` attributes, or new class definitions. If a layout need isn't covered by an existing class, use the closest existing class — do not invent new styles. **Exceptions**: The reveal format template (`report-template-reveal.html`) has all CSS inlined — there is no companion CSS file. Do not add additional `<style>` blocks beyond the `:root { --accent }` override. The Figma format uses the template's existing styles — do not create new Figma styles, only use what exists in the template.
+8. **Never create, modify, or inject CSS.** The report templates ship with styling assets that define all presentation. Copy them unchanged into the output directory. Do not add `<style>` blocks (except the small brand-token override already used by the reveal template), inline `style` attributes, or new class definitions. If a layout need is not covered by the existing HTML/components, use the closest existing structure — do not invent new styles. **Exceptions**: The reveal format uses the bundled `revealjs-template/` assets (`reveal-audit-theme.css`, `local-fonts.css`, `audit-kit.js`, `RMS-lcon.svg`, `fonts/`) instead of an inline-only template. The Figma format uses the template's existing styles — do not create new Figma styles, only use what exists in the template.
 
 9. **Always load `figma-use` before `use_figma`.** The `figma-use` skill MUST be invoked before every `use_figma` tool call. Skipping it causes hard-to-debug failures. This is a blocking requirement.
 
