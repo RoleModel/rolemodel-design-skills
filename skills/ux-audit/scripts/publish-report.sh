@@ -262,8 +262,8 @@ case "$PROVIDER" in
     if [ -n "${VERCEL_SCOPE:-}" ]; then
       VERCEL_SCOPE_ARGS=(--scope "$VERCEL_SCOPE")
     fi
-    npx -y vercel link "$DEPLOY_DIR" --yes --project "$PROJECT_NAME" "${VERCEL_SCOPE_ARGS[@]}" >/dev/null
-    VERCEL_OUTPUT=$(npx -y vercel deploy "$DEPLOY_DIR" --prod --yes "${VERCEL_SCOPE_ARGS[@]}" 2>&1)
+    npx -y vercel link --cwd "$DEPLOY_DIR" --yes --project "$PROJECT_NAME" "${VERCEL_SCOPE_ARGS[@]}" >/dev/null
+    VERCEL_OUTPUT=$(npx -y vercel deploy --cwd "$DEPLOY_DIR" --prod --yes "${VERCEL_SCOPE_ARGS[@]}" 2>&1)
     VERCEL_URL=$(echo "$VERCEL_OUTPUT" | grep -oE 'https://[^ ]+\.vercel\.app' | tail -1)
     if [ -n "$VERCEL_URL" ]; then
       echo ""
