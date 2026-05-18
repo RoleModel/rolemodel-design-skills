@@ -38,6 +38,8 @@
    - a short summary of the main opportunity,
    - a recommendation: `Park`, `Pursue`, or `Graduate to dedicated project`.
 
+   If the work should become a durable branded document, hand off to `paged-document` after findings are reviewed and prioritized. Use [references/paged-document-handoff.md](references/paged-document-handoff.md) to gather the source packet, start the outline, and carry the work through RoleModel voice review, layout QA, and PDF export.
+
 7. Close the task with a clear next move.
    - Add all artifact links to this ticket.
    - State what should happen next and who should own it.

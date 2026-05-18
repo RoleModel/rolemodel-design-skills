@@ -57,6 +57,7 @@ skills/ux-audit/
     html-template/         # Scrollable HTML report templates (internal, client, magazine)
     revealjs-template/     # Reveal.js slide deck bundle + audit-kit web components
     figma-workflow.md      # Figma MCP canvas-write workflow
+    paged-document-handoff.md  # Source-packet handoff into branded paged documents
     tone-guide.md          # Language rules for internal vs client mode
     team-guide.md          # Client audit philosophy (Then/Now/Next)
     severity-model.md      # Critical/High/Medium/Pattern classification
@@ -72,6 +73,7 @@ For the farming workflow, treat the outputs as a contract:
 - `html` → use `html-template/` plus its companion CSS
 - `figma` → duplicate the Figma template and populate it through the documented Figma flow
 - `publish` → package the generated report and assets, then deploy through the publish script
+- `paged-document` → after findings are reviewed, hand off a source packet through `references/paged-document-handoff.md` for outline, branded HTML, layout QA, and PDF export
 
 Concrete audit outputs and heavier demos belong in the separate `rolemodel-ux-audit-projects` repo. Keep static audit reports as normal folders there; use git submodules for larger demo apps so people can opt into those checkouts instead of downloading every project by default.
 

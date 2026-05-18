@@ -133,6 +133,7 @@ Three output formats are available. Set via CLI flag or `"format"` in `.ux-audit
 
 See [references/tone-guide.md](references/tone-guide.md) for detailed language rules for each mode.
 See [references/team-guide.md](references/team-guide.md) for the complete client audit philosophy and deliverable structure.
+See [references/paged-document-handoff.md](references/paged-document-handoff.md) for the handoff from reviewed findings into a branded paged-document artifact.
 See [references/figma-workflow.md](references/figma-workflow.md) for the Figma canvas workflow.
 
 ### Required References
