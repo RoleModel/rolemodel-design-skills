@@ -244,12 +244,12 @@ The GitHub Pages publisher creates or updates `<project-slug>/audit/catalog.json
 https://rolemodel.github.io/rolemodel-ux-audit-projects/
 ```
 
-For follow-up artifacts, update the project metadata file and rerun the builder:
+For follow-up artifacts, update the project metadata file. The projects repo pre-commit hook rebuilds the root catalog when it is enabled.
 
 ```sh
 cd ~/ux-audits/rolemodel-ux-audit-projects
 $EDITOR <project-slug>/audit/catalog.json
-node scripts/build-index.mjs
+git config core.hooksPath .githooks
 ```
 
 If the project has more than one artifact, keep them grouped under the same project entry. Example links:
@@ -258,7 +258,7 @@ If the project has more than one artifact, keep them grouped under the same proj
 - interactive demo: external Vercel URL or `/<project-slug>/<demo-slug>/`
 - PDF or paged document: `/<project-slug>/<file-name>.pdf`
 
-Commit and push the `catalog.json` and generated `index.html` update with the artifact publish commit, or as the next commit if the publish script already pushed.
+Commit and push the `catalog.json` and generated `index.html` update with the artifact publish commit, or as the next commit if the publish script already pushed. If the hook is not enabled, run `node scripts/build-index.mjs` before committing.
 
 ## 16. Add an interactive demo link only when needed
 

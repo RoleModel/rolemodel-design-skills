@@ -979,7 +979,7 @@ Set in `.ux-audit.json` under `"publish"`:
 - Published reports are static sites — no server-side code, no database, no build step
 - Each deployment creates a unique URL. Re-deploying the same project name updates the existing URL.
 - The audits repo (`rolemodel-ux-audits/`) convention is one folder per client: `rapidair/index.html`, `clientname/index.html`, etc. Each folder can be published independently.
-- For GitHub Pages catalog publishing, create or update `<project-slug>/audit/catalog.json` in `rolemodel-ux-audit-projects` and run `node scripts/build-index.mjs` so every audit report, PDF, deck, demo, playbook, or supporting artifact is linked from https://rolemodel.github.io/rolemodel-ux-audit-projects/. The publish script does this automatically for the primary audit link.
+- For GitHub Pages catalog publishing, create or update `<project-slug>/audit/catalog.json` in `rolemodel-ux-audit-projects` so every audit report, PDF, deck, demo, playbook, or supporting artifact is linked from https://rolemodel.github.io/rolemodel-ux-audit-projects/. The projects repo pre-commit hook, publish script, and Pages workflow rebuild the generated root `index.html`.
 
 ## Strict Rules
 

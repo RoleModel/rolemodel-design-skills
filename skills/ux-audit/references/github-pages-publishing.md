@@ -40,7 +40,7 @@ https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>/audit
 4. Copy the report bundle into `<project-slug>/audit/`.
 5. Ensure `.nojekyll` exists at the projects repo root.
 6. Create or update `<project-slug>/audit/catalog.json`.
-7. Run `node scripts/build-index.mjs` in the projects repo.
+7. Rebuild the generated root `index.html` through the projects repo pre-commit hook or `node scripts/build-index.mjs`.
 8. Print the final GitHub Pages URL.
 9. Commit and push when `--commit --push` are passed.
 
@@ -52,7 +52,7 @@ The deployed report URL is not enough. Every audit artifact should also be disco
 https://rolemodel.github.io/rolemodel-ux-audit-projects/
 ```
 
-When adding any artifact to `rolemodel-ux-audit-projects`, update `<project-slug>/audit/catalog.json` and rebuild the root index with `node scripts/build-index.mjs`. Keep related artifacts grouped under the same project entry:
+When adding any artifact to `rolemodel-ux-audit-projects`, update `<project-slug>/audit/catalog.json`. The projects repo pre-commit hook, publish script, and Pages workflow rebuild the root index automatically. Keep related artifacts grouped under the same project entry:
 
 - audit report: `/<project-slug>/`
 - paged document or PDF: `/<project-slug>/<file-name>.pdf`
@@ -60,7 +60,7 @@ When adding any artifact to `rolemodel-ux-audit-projects`, update `<project-slug
 - interactive demo: external Vercel URL or `/<project-slug>/<demo-slug>/`
 - playbook or supporting file: the file path under the project folder
 
-The GitHub Pages publisher does this automatically for the primary audit link. Do this manually for follow-up artifacts added later. If the publish script has already committed and pushed the report bundle, commit the `catalog.json` and generated `index.html` update immediately after.
+The GitHub Pages publisher does this automatically for the primary audit link. For follow-up artifacts added later, update `catalog.json` and commit normally. If the local hook is not enabled, run `node scripts/build-index.mjs` before committing.
 
 ## Intended command
 
