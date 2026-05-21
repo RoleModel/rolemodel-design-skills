@@ -1,0 +1,5 @@
+repos:
+  - repo: https://github.com/runkids/skillshare
+    rev: v0.16.8 # use latest release tag
+    hooks:
+      - id: skillshare-audit

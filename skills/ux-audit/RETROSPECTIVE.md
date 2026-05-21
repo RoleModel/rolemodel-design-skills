@@ -30,7 +30,7 @@ Audience mode drives template selection, report structure, finding language, and
 Each phase is independently invocable (`/ux-audit scan`, `/ux-audit report`, etc.).
 
 ### Magazine HTML template
-`references/report-template-magazine.html` is the client-facing deliverable format. It produces 8.5×11 aspect-ratio slides that can be copied directly into Figma. Sections: Cover → Executive Summary → Then → Now (intro + 4 improvement slides) → Color System → Close (recommendations).
+`references/html-template/report-template-magazine.html` is the client-facing deliverable format. It produces 8.5×11 aspect-ratio slides that can be copied directly into Figma. Sections: Cover → Executive Summary → Then → Now (intro + 4 improvement slides) → Color System → Close (recommendations).
 
 ### Figma workflow
 Use `mcp__figma__generate_figma_design` and `mcp__figma__get_design_context` / `mcp__figma__get_screenshot` from the **Figma MCP** throughout. This is the primary tool for both generating designs and pushing the HTML report into Figma.
@@ -133,20 +133,34 @@ Use the Figma MCP (`mcp__figma__*`) throughout: `get_design_context` and `get_sc
 
 ```
 SKILL.md                              # Main skill definition + 5-phase workflow
-INSTALL.md                            # Setup and installation
+AGENT.md                              # Autonomous agent configuration
 RETROSPECTIVE.md                      # This file
 references/
   audit-checklist.md                  # 9 audit categories + grep patterns
   severity-model.md                   # Critical/High/Medium/Pattern classification
   tone-guide.md                       # Language rules for internal vs client mode
   team-guide.md                       # Client audit philosophy + Then/Now/Next arc
-  report-template.html                # Internal report template
-  report-template-client.html         # Client report template (original)
-  report-template-magazine.html       # Magazine-style client report (current best)
+  html-template/
+    report-template.html              # Internal report template
+    report-template.css               # Internal report CSS
+    report-template-client.html       # Client report template (Then/Now/Next)
+    report-template-client.css        # Client report CSS
+    report-template-magazine.html     # Magazine-style client report (current best)
+    report-template-magazine.css      # Magazine report CSS
+  revealjs-template/
+    index.html                        # Reveal.js slide deck entry point
+    audit-kit.js                      # Web components (cover, stat, finding, etc.)
+    reveal-audit-theme.css            # Reveal.js theme + slide styles
+    local-fonts.css                   # Local font face declarations
+    RMS-lcon.svg                      # RoleModel icon asset
+    fonts/                            # DM Sans + GeistMono font files
+    README.md                         # Component documentation
   figma-workflow.md                   # Figma MCP workflow guide
   dtcg-format.md                      # DTCG token JSON spec
 scripts/
   generate-figma-variables.mjs        # Optics → DTCG token JSON
   generate-all-tokens.mjs             # Full token generation pipeline
   scan-hardcoded-values.sh            # Grep wrapper for Phase 1 scan
+  run-audit-agent.sh                  # Interactive/headless audit runner
+  publish-report.sh                   # Vercel/Netlify/Surge publisher
 ```
