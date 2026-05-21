@@ -29,7 +29,7 @@ Owns generated artifacts:
 ## URL pattern
 
 ```txt
-https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>/audit
+https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>
 ```
 
 ## Intended publish flow
@@ -52,7 +52,7 @@ The deployed report URL is not enough. Every audit artifact should also be disco
 https://rolemodel.github.io/rolemodel-ux-audit-projects/
 ```
 
-When adding any artifact to `rolemodel-ux-audit-projects`, update `<project-slug>/audit/catalog.json`. The projects repo pre-commit hook, publish script, and Pages workflow rebuild the root index automatically. Keep related artifacts grouped under the same project entry:
+When adding any artifact to `rolemodel-ux-audit-projects`, put it under `<project-slug>/audit/`. The projects repo pre-commit hook, publish script, and Pages workflow rebuild the root index automatically. The catalog card discovers top-level `.html`, `.pdf`, `.md`, `.mp4`, `.webm`, and `.mov` files and lists them under the same project entry:
 
 - audit report: `/<project-slug>/`
 - paged document or PDF: `/<project-slug>/<file-name>.pdf`
@@ -60,7 +60,7 @@ When adding any artifact to `rolemodel-ux-audit-projects`, update `<project-slug
 - interactive demo: external Vercel URL or `/<project-slug>/<demo-slug>/`
 - playbook or supporting file: the file path under the project folder
 
-The GitHub Pages publisher does this automatically for the primary audit link. For follow-up artifacts added later, update `catalog.json` and commit normally. If the local hook is not enabled, run `node scripts/build-index.mjs` before committing.
+Use `<project-slug>/audit/catalog.json` for the project title, summary, status, and links that cannot be discovered from files, such as an external Vercel demo. For follow-up artifacts added later, commit the artifact and regenerated root `index.html` normally. If the local hook is not enabled, run `node scripts/build-index.mjs` before committing.
 
 ## Intended command
 

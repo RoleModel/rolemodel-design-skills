@@ -227,24 +227,24 @@ One-command publish:
 Published URL pattern:
 
 ```txt
-https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>/audit
+https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>
 ```
 
 RapidAir example:
 
-https://rolemodel.github.io/rolemodel-ux-audit-projects/rapidair/audit
+https://rolemodel.github.io/rolemodel-ux-audit-projects/rapidair
 
 ## 15. Confirm the artifact appears in the GitHub Pages catalog index
 
 Every published artifact needs a path, and it also needs a way to be found.
 
-The GitHub Pages publisher creates or updates `<project-slug>/audit/catalog.json` and rebuilds the root `index.html` automatically. After publishing, confirm the project appears in the catalog:
+The GitHub Pages publisher creates or updates `<project-slug>/audit/catalog.json` and rebuilds the root `index.html` automatically. The catalog card lists every top-level user-facing artifact in `<project-slug>/audit/`, including `.html`, `.pdf`, `.md`, `.mp4`, `.webm`, and `.mov` files. After publishing, confirm the project appears in the catalog:
 
 ```txt
 https://rolemodel.github.io/rolemodel-ux-audit-projects/
 ```
 
-For follow-up artifacts, update the project metadata file. The projects repo pre-commit hook rebuilds the root catalog when it is enabled.
+For follow-up artifacts, add the file to the project audit folder. Update the project metadata file only when the title, summary, status, or extra external links changed. The projects repo pre-commit hook rebuilds the root catalog when it is enabled.
 
 ```sh
 cd ~/ux-audits/rolemodel-ux-audit-projects
@@ -252,11 +252,10 @@ $EDITOR <project-slug>/audit/catalog.json
 git config core.hooksPath .githooks
 ```
 
-If the project has more than one artifact, keep them grouped under the same project entry. Example links:
+If the project has more than one artifact, keep them grouped under the same project entry. The generator discovers local artifact links automatically. Use `catalog.json` for external links:
 
-- audit report: `/<project-slug>/`
-- interactive demo: external Vercel URL or `/<project-slug>/<demo-slug>/`
-- PDF or paged document: `/<project-slug>/<file-name>.pdf`
+- interactive demo: external Vercel URL
+- hosted companion app: `/<project-slug>/<demo-slug>/`
 
 Commit and push the `catalog.json` and generated `index.html` update with the artifact publish commit, or as the next commit if the publish script already pushed. If the hook is not enabled, run `node scripts/build-index.mjs` before committing.
 

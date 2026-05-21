@@ -77,7 +77,7 @@ For the farming workflow, treat the outputs as a contract:
 
 Concrete audit outputs and heavier demos belong in the separate `rolemodel-ux-audit-projects` repo. Keep static audit reports as normal folders there; use git submodules for larger demo apps so people can opt into those checkouts instead of downloading every project by default.
 
-When you add or publish a new artifact in `rolemodel-ux-audit-projects`, make sure `<project-slug>/audit/catalog.json` describes it. The projects repo generates the root `index.html` catalog from those files.
+When you add or publish new artifacts in `rolemodel-ux-audit-projects`, keep them in `<project-slug>/audit/` and make sure `<project-slug>/audit/catalog.json` describes the project. The projects repo generates the root `index.html` catalog from that metadata plus every top-level user-facing artifact file in the audit folder.
 
 ## Updating
 
@@ -172,7 +172,7 @@ The script reads `.ux-audit.json`, packages the report and its local assets, lin
 
 ## Publishing Static Reports with GitHub Pages
 
-Use GitHub Pages for static audit reports that belong in the sibling `rolemodel-ux-audit-projects` catalog repo. The public catalog lives at [rolemodel.github.io/rolemodel-ux-audit-projects](https://rolemodel.github.io/rolemodel-ux-audit-projects/). The publisher creates or updates `<project-slug>/audit/catalog.json` and runs the projects repo catalog builder automatically. The designer-facing flow is documented in [`DESIGNER_INSTRUCTIONS.md`](DESIGNER_INSTRUCTIONS.md), and the provider behavior is documented in [`skills/ux-audit/references/github-pages-publishing.md`](skills/ux-audit/references/github-pages-publishing.md).
+Use GitHub Pages for static audit reports that belong in the sibling `rolemodel-ux-audit-projects` catalog repo. The public catalog lives at [rolemodel.github.io/rolemodel-ux-audit-projects](https://rolemodel.github.io/rolemodel-ux-audit-projects/). The publisher creates or updates `<project-slug>/audit/catalog.json`, and the projects repo catalog builder lists all top-level `.html`, `.pdf`, `.md`, `.mp4`, `.webm`, and `.mov` artifacts automatically. The designer-facing flow is documented in [`DESIGNER_INSTRUCTIONS.md`](DESIGNER_INSTRUCTIONS.md), and the provider behavior is documented in [`skills/ux-audit/references/github-pages-publishing.md`](skills/ux-audit/references/github-pages-publishing.md).
 
 ## Non-Optics Projects
 
