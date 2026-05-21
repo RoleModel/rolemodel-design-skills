@@ -127,6 +127,8 @@ Or create `.ux-audit.json` manually:
 
 ## Usage
 
+For a short designer-facing checklist, see [`DESIGNER_INSTRUCTIONS.md`](DESIGNER_INSTRUCTIONS.md).
+
 ```bash
 # Full audit — scans, maps tokens, audits, walks findings interactively
 /ux-audit
@@ -165,6 +167,10 @@ The default publish path is Vercel. After a report is generated, run:
 ```
 
 The script reads `.ux-audit.json`, packages the report and its local assets, links the temporary deploy directory to the configured Vercel project name, and deploys to production. On first use, authenticate once with `npx vercel login`; later publishes can run headlessly. Set `publish.projectName` in `.ux-audit.json` when you want a stable client-facing slug such as `rapidair-assessment`.
+
+## Publishing Static Reports with GitHub Pages
+
+Use GitHub Pages for static audit reports that belong in the sibling `rolemodel-ux-audit-projects` catalog repo. The designer-facing flow is documented in [`DESIGNER_INSTRUCTIONS.md`](DESIGNER_INSTRUCTIONS.md), and the provider behavior is documented in [`skills/ux-audit/references/github-pages-publishing.md`](skills/ux-audit/references/github-pages-publishing.md).
 
 ## Non-Optics Projects
 

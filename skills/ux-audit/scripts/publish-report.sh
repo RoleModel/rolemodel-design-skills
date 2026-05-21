@@ -6,20 +6,21 @@
 #
 # Usage:
 #   ./publish-report.sh                                          # Interactive mode
-#   ./publish-report.sh [output-dir] [--provider vercel|netlify|surge] [--name project-name] [--scope vercel-team]
+#   ./publish-report.sh [output-dir] [--provider vercel|netlify|surge|github-pages] [--name project-name] [--scope vercel-team]
 #
 # Examples:
 #   ./publish-report.sh
 #   ./publish-report.sh dev-tools/ux-audit-output
 #   ./publish-report.sh dev-tools/ux-audit-output --provider netlify
 #   ./publish-report.sh dev-tools/ux-audit-output --provider vercel --name my-app-ux-audit
-#   ./publish-report.sh /path/to/rolemodel-ux-audit-projects/project-audits/rapid-air --provider vercel --name rapid-air-assessment --scope rolemodel-team
+#   ./publish-report.sh /path/to/report --provider github-pages --name rapidair --projects-repo ~/Development/ux-audits/rolemodel-ux-audit-projects --commit --push
 #
 # Prerequisites:
 #   - Node.js installed (for npx)
 #   - For Vercel: authenticated via `npx vercel login` or VERCEL_TOKEN env var
 #   - For Netlify: authenticated via `npx netlify-cli login` or NETLIFY_AUTH_TOKEN env var
 #   - For Surge: authenticated via `npx surge login`
+#   - For GitHub Pages: rolemodel-ux-audit-projects checkout with push access
 #
 
 set -euo pipefail
@@ -63,6 +64,7 @@ echo ""
 # --- Auto-detect defaults from .ux-audit.json ---
 AUTO_OUTPUT_DIR="dev-tools/ux-audit-output"
 AUTO_PROJECT_NAME="assessment"
+AUTO_PROJECTS_REPO="$HOME/Development/ux-audits/rolemodel-ux-audit-projects"
 
 # Keep the publisher current when it is used against the external projects repo.
 # The projects repo is intentionally separate so project artifacts do not bloat the
@@ -113,14 +115,22 @@ if [ $# -eq 0 ]; then
   echo ""
 
   prompt "Output directory" "$AUTO_OUTPUT_DIR" OUTPUT_DIR
-  prompt_choice "Deploy provider" "vercel, netlify, surge" "vercel" PROVIDER
-  prompt "URL slug (becomes {slug}.vercel.app)" "$AUTO_PROJECT_NAME" PROJECT_NAME
+  prompt_choice "Deploy provider" "vercel, netlify, surge, github-pages" "github-pages" PROVIDER
+  prompt "URL slug" "$AUTO_PROJECT_NAME" PROJECT_NAME
+  if [ "$PROVIDER" = "github-pages" ]; then
+    prompt "Projects repo" "$AUTO_PROJECTS_REPO" PROJECTS_REPO
+    PUBLISH_COMMIT="false"
+    PUBLISH_PUSH="false"
+  fi
 else
   # Headless mode - parse arguments
   OUTPUT_DIR=""
   PROVIDER="vercel"
   PROJECT_NAME=""
   VERCEL_SCOPE=""
+  PROJECTS_REPO=""
+  PUBLISH_COMMIT="false"
+  PUBLISH_PUSH="false"
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -148,6 +158,22 @@ else
         VERCEL_SCOPE="${1#*=}"
         shift
         ;;
+      --projects-repo)
+        PROJECTS_REPO="$2"
+        shift 2
+        ;;
+      --projects-repo=*)
+        PROJECTS_REPO="${1#*=}"
+        shift
+        ;;
+      --commit)
+        PUBLISH_COMMIT="true"
+        shift
+        ;;
+      --push)
+        PUBLISH_PUSH="true"
+        shift
+        ;;
       -*)
         printf "${YELLOW}  Unknown option: %s${RESET}\n" "$1" >&2
         exit 1
@@ -166,6 +192,10 @@ else
   if [ -z "$PROJECT_NAME" ]; then
     PROJECT_NAME="$AUTO_PROJECT_NAME"
   fi
+fi
+
+if [ "${PROVIDER:-}" = "github-pages" ] && [ -z "${PROJECTS_REPO:-}" ]; then
+  PROJECTS_REPO="$AUTO_PROJECTS_REPO"
 fi
 
 if [ -z "${VERCEL_SCOPE:-}" ] && [ -f .ux-audit.json ]; then
@@ -228,7 +258,12 @@ echo ""
 printf "${CYAN}${BOLD}  ── Deploy Configuration ───────────────────${RESET}\n"
 printf "${BOLD}  Report:   ${RESET}%s\n" "$REPORT_FILE"
 printf "${BOLD}  Provider: ${RESET}%s\n" "$PROVIDER"
-printf "${BOLD}  URL slug: ${RESET}%s.vercel.app\n" "$PROJECT_NAME"
+if [ "$PROVIDER" = "github-pages" ]; then
+  printf "${BOLD}  URL:      ${RESET}https://rolemodel.github.io/rolemodel-ux-audit-projects/%s/audit\n" "$PROJECT_NAME"
+  printf "${BOLD}  Repo:     ${RESET}%s\n" "$PROJECTS_REPO"
+else
+  printf "${BOLD}  URL slug: ${RESET}%s.vercel.app\n" "$PROJECT_NAME"
+fi
 if [ -n "${VERCEL_SCOPE:-}" ]; then
   printf "${BOLD}  Scope:    ${RESET}%s\n" "$VERCEL_SCOPE"
 fi
@@ -281,8 +316,64 @@ case "$PROVIDER" in
     printf "${BOLD}  Deploying to Surge...${RESET}\n"
     npx -y surge "$DEPLOY_DIR" "${PROJECT_NAME}.surge.sh"
     ;;
+  github-pages)
+    printf "${BOLD}  Publishing to GitHub Pages catalog...${RESET}\n"
+
+    if [ ! -d "$PROJECTS_REPO/.git" ]; then
+      printf "${YELLOW}  ✗ Projects repo not found at %s${RESET}\n" "$PROJECTS_REPO" >&2
+      printf "${YELLOW}    Clone RoleModel/rolemodel-ux-audit-projects there or pass --projects-repo.${RESET}\n" >&2
+      exit 1
+    fi
+
+    if ! git -C "$PROJECTS_REPO" diff --ignore-submodules=all --quiet || ! git -C "$PROJECTS_REPO" diff --cached --ignore-submodules=all --quiet; then
+      printf "${YELLOW}  ✗ Projects repo has uncommitted changes; refusing to publish over them.${RESET}\n" >&2
+      printf "${DIM}     Repo: %s${RESET}\n" "$PROJECTS_REPO" >&2
+      git -C "$PROJECTS_REPO" status --short --ignore-submodules=all >&2
+      exit 1
+    fi
+
+    DEST_DIR="$PROJECTS_REPO/$PROJECT_NAME/audit"
+    mkdir -p "$DEST_DIR"
+
+    SOURCE_DIR="$(cd "$OUTPUT_DIR" && pwd -P)"
+    TARGET_DIR="$(cd "$DEST_DIR" && pwd -P)"
+    if [ "$SOURCE_DIR" != "$TARGET_DIR" ]; then
+      rsync -a --delete \
+        --exclude '.git/' \
+        --exclude '.DS_Store' \
+        --exclude '.env.local' \
+        --exclude '.vercel/' \
+        "$SOURCE_DIR"/ "$TARGET_DIR"/
+    fi
+
+    REPORT_PATH="$(cd "$(dirname "$REPORT_FILE")" && pwd -P)/$(basename "$REPORT_FILE")"
+    INDEX_PATH="$TARGET_DIR/index.html"
+    if [ "$REPORT_PATH" != "$INDEX_PATH" ]; then
+      cp "$REPORT_FILE" "$DEST_DIR/index.html"
+    fi
+    touch "$PROJECTS_REPO/.nojekyll"
+
+    git -C "$PROJECTS_REPO" add .nojekyll "$PROJECT_NAME/audit"
+
+    if git -C "$PROJECTS_REPO" diff --cached --quiet; then
+      printf "${DIM}  No catalog changes to commit.${RESET}\n"
+    elif [ "$PUBLISH_COMMIT" = "true" ]; then
+      git -C "$PROJECTS_REPO" commit -m "Publish ${PROJECT_NAME} audit"
+    else
+      printf "${YELLOW}  Staged catalog changes but did not commit. Pass --commit to commit automatically.${RESET}\n"
+    fi
+
+    if [ "$PUBLISH_PUSH" = "true" ]; then
+      git -C "$PROJECTS_REPO" push origin main
+    elif [ "$PUBLISH_COMMIT" = "true" ]; then
+      printf "${YELLOW}  Committed catalog changes but did not push. Pass --push to push automatically.${RESET}\n"
+    fi
+
+    echo ""
+    printf "${GREEN}${BOLD}  ✓ GitHub Pages URL: ${RESET}${BOLD}https://rolemodel.github.io/rolemodel-ux-audit-projects/%s/audit${RESET}\n" "$PROJECT_NAME"
+    ;;
   *)
-    printf "${YELLOW}  ✗ Unknown provider '%s'. Use: vercel, netlify, or surge${RESET}\n" "$PROVIDER" >&2
+    printf "${YELLOW}  ✗ Unknown provider '%s'. Use: vercel, netlify, surge, or github-pages${RESET}\n" "$PROVIDER" >&2
     exit 1
     ;;
 esac
