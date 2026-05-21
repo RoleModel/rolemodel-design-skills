@@ -40,7 +40,7 @@ This repository is the maintained source of truth for `/ux-audit`.
 
 - **Claude Code** uses a symlink created by `./scripts/setup.sh`, so pulling this repo updates that install immediately.
 - **Other AI CLIs** (Codex, Cursor, etc.) can use a copy or symlink. Refresh from this repo when the workflow is intentionally promoted.
-- **Project examples and demos** live in the sibling `rolemodel-ux-audit-projects` repo so this skill repo stays light to clone.
+- **Project examples and demos** live in the sibling `rolemodel-ux-audit-projects` repo so this skill repo stays light to clone. The public catalog is [rolemodel.github.io/rolemodel-ux-audit-projects](https://rolemodel.github.io/rolemodel-ux-audit-projects/).
 
 ```text
 skills/ux-audit/
@@ -76,6 +76,8 @@ For the farming workflow, treat the outputs as a contract:
 - `paged-document` → after findings are reviewed, hand off a source packet through `references/paged-document-handoff.md` for outline, branded HTML, layout QA, and PDF export
 
 Concrete audit outputs and heavier demos belong in the separate `rolemodel-ux-audit-projects` repo. Keep static audit reports as normal folders there; use git submodules for larger demo apps so people can opt into those checkouts instead of downloading every project by default.
+
+When you add or publish a new artifact in `rolemodel-ux-audit-projects`, make sure `<project-slug>/audit/catalog.json` describes it. The projects repo generates the root `index.html` catalog from those files.
 
 ## Updating
 
@@ -170,7 +172,7 @@ The script reads `.ux-audit.json`, packages the report and its local assets, lin
 
 ## Publishing Static Reports with GitHub Pages
 
-Use GitHub Pages for static audit reports that belong in the sibling `rolemodel-ux-audit-projects` catalog repo. The designer-facing flow is documented in [`DESIGNER_INSTRUCTIONS.md`](DESIGNER_INSTRUCTIONS.md), and the provider behavior is documented in [`skills/ux-audit/references/github-pages-publishing.md`](skills/ux-audit/references/github-pages-publishing.md).
+Use GitHub Pages for static audit reports that belong in the sibling `rolemodel-ux-audit-projects` catalog repo. The public catalog lives at [rolemodel.github.io/rolemodel-ux-audit-projects](https://rolemodel.github.io/rolemodel-ux-audit-projects/). The publisher creates or updates `<project-slug>/audit/catalog.json` and runs the projects repo catalog builder automatically. The designer-facing flow is documented in [`DESIGNER_INSTRUCTIONS.md`](DESIGNER_INSTRUCTIONS.md), and the provider behavior is documented in [`skills/ux-audit/references/github-pages-publishing.md`](skills/ux-audit/references/github-pages-publishing.md).
 
 ## Non-Optics Projects
 

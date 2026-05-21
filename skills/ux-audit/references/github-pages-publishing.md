@@ -23,6 +23,8 @@ Owns generated artifacts:
 - static report bundles
 - playbooks and supporting artifacts
 - `<project-slug>/<demo-slug>/` submodules for interactive prototypes
+- `<project-slug>/audit/catalog.json`, the project metadata used to generate the public catalog
+- generated root `index.html`, the public catalog at https://rolemodel.github.io/rolemodel-ux-audit-projects/
 
 ## URL pattern
 
@@ -37,8 +39,28 @@ https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>/audit
 3. Resolve the projects repo path.
 4. Copy the report bundle into `<project-slug>/audit/`.
 5. Ensure `.nojekyll` exists at the projects repo root.
-6. Print the final GitHub Pages URL.
-7. Commit and push when `--commit --push` are passed.
+6. Create or update `<project-slug>/audit/catalog.json`.
+7. Run `node scripts/build-index.mjs` in the projects repo.
+8. Print the final GitHub Pages URL.
+9. Commit and push when `--commit --push` are passed.
+
+## Catalog index requirement
+
+The deployed report URL is not enough. Every audit artifact should also be discoverable from the public catalog:
+
+```txt
+https://rolemodel.github.io/rolemodel-ux-audit-projects/
+```
+
+When adding any artifact to `rolemodel-ux-audit-projects`, update `<project-slug>/audit/catalog.json` and rebuild the root index with `node scripts/build-index.mjs`. Keep related artifacts grouped under the same project entry:
+
+- audit report: `/<project-slug>/`
+- paged document or PDF: `/<project-slug>/<file-name>.pdf`
+- Reveal deck: `/<project-slug>/`
+- interactive demo: external Vercel URL or `/<project-slug>/<demo-slug>/`
+- playbook or supporting file: the file path under the project folder
+
+The GitHub Pages publisher does this automatically for the primary audit link. Do this manually for follow-up artifacts added later. If the publish script has already committed and pushed the report bundle, commit the `catalog.json` and generated `index.html` update immediately after.
 
 ## Intended command
 
@@ -46,6 +68,7 @@ https://rolemodel.github.io/rolemodel-ux-audit-projects/<project-slug>/audit
 ./publish-report.sh <output-dir> \
   --provider github-pages \
   --name <project-slug> \
+  --title "<Project Name> Opportunity Assessment" \
   --projects-repo ~/rolemodel-ux-audit-projects \
   --commit \
   --push

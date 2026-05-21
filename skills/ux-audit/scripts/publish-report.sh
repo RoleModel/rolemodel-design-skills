@@ -6,14 +6,14 @@
 #
 # Usage:
 #   ./publish-report.sh                                          # Interactive mode
-#   ./publish-report.sh [output-dir] [--provider vercel|netlify|surge|github-pages] [--name project-name] [--scope vercel-team]
+#   ./publish-report.sh [output-dir] [--provider vercel|netlify|surge|github-pages] [--name project-name] [--title catalog-title] [--summary catalog-summary] [--scope vercel-team]
 #
 # Examples:
 #   ./publish-report.sh
 #   ./publish-report.sh dev-tools/ux-audit-output
 #   ./publish-report.sh dev-tools/ux-audit-output --provider netlify
 #   ./publish-report.sh dev-tools/ux-audit-output --provider vercel --name my-app-ux-audit
-#   ./publish-report.sh /path/to/report --provider github-pages --name rapidair --projects-repo ~/Development/ux-audits/rolemodel-ux-audit-projects --commit --push
+#   ./publish-report.sh /path/to/report --provider github-pages --name rapidair --title "RapidAir Opportunity Assessment" --projects-repo ~/Development/ux-audits/rolemodel-ux-audit-projects --commit --push
 #
 # Prerequisites:
 #   - Node.js installed (for npx)
@@ -64,6 +64,8 @@ echo ""
 # --- Auto-detect defaults from .ux-audit.json ---
 AUTO_OUTPUT_DIR="dev-tools/ux-audit-output"
 AUTO_PROJECT_NAME="assessment"
+AUTO_CATALOG_TITLE=""
+AUTO_CATALOG_SUMMARY="Published UX audit artifacts."
 AUTO_PROJECTS_REPO="$HOME/Development/ux-audits/rolemodel-ux-audit-projects"
 
 # Keep the publisher current when it is used against the external projects repo.
@@ -83,12 +85,26 @@ if [ -f .ux-audit.json ]; then
 
   DETECTED_BRAND=$(python3 -c "import json; print(json.load(open('.ux-audit.json')).get('brand', {}).get('name', ''))" 2>/dev/null || echo "")
   DETECTED_PUBLISH_NAME=$(python3 -c "import json; print(json.load(open('.ux-audit.json')).get('publish', {}).get('projectName', ''))" 2>/dev/null || echo "")
+  DETECTED_CATALOG_TITLE=$(python3 -c "import json; print(json.load(open('.ux-audit.json')).get('publish', {}).get('catalogTitle', ''))" 2>/dev/null || echo "")
+  DETECTED_CATALOG_SUMMARY=$(python3 -c "import json; print(json.load(open('.ux-audit.json')).get('publish', {}).get('catalogSummary', ''))" 2>/dev/null || echo "")
   if [ -n "$DETECTED_PUBLISH_NAME" ]; then
     AUTO_PROJECT_NAME=$(echo "$DETECTED_PUBLISH_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
   elif [ -n "$DETECTED_BRAND" ]; then
     # Default: "{brand}-assessment" — clean, client-facing URL
     AUTO_PROJECT_NAME=$(echo "$DETECTED_BRAND-assessment" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g')
   fi
+  if [ -n "$DETECTED_CATALOG_TITLE" ]; then
+    AUTO_CATALOG_TITLE="$DETECTED_CATALOG_TITLE"
+  elif [ -n "$DETECTED_BRAND" ]; then
+    AUTO_CATALOG_TITLE="$DETECTED_BRAND Assessment"
+  fi
+  if [ -n "$DETECTED_CATALOG_SUMMARY" ]; then
+    AUTO_CATALOG_SUMMARY="$DETECTED_CATALOG_SUMMARY"
+  fi
+fi
+
+if [ -z "$AUTO_CATALOG_TITLE" ]; then
+  AUTO_CATALOG_TITLE="$AUTO_PROJECT_NAME Audit"
 fi
 
 # --- Publish context sync ---
@@ -118,6 +134,8 @@ if [ $# -eq 0 ]; then
   prompt_choice "Deploy provider" "vercel, netlify, surge, github-pages" "github-pages" PROVIDER
   prompt "URL slug" "$AUTO_PROJECT_NAME" PROJECT_NAME
   if [ "$PROVIDER" = "github-pages" ]; then
+    prompt "Catalog title" "$AUTO_CATALOG_TITLE" CATALOG_TITLE
+    prompt "Catalog summary" "$AUTO_CATALOG_SUMMARY" CATALOG_SUMMARY
     prompt "Projects repo" "$AUTO_PROJECTS_REPO" PROJECTS_REPO
     PUBLISH_COMMIT="false"
     PUBLISH_PUSH="false"
@@ -127,6 +145,9 @@ else
   OUTPUT_DIR=""
   PROVIDER="vercel"
   PROJECT_NAME=""
+  CATALOG_TITLE=""
+  CATALOG_SUMMARY=""
+  CATALOG_TITLE_SET="false"
   VERCEL_SCOPE=""
   PROJECTS_REPO=""
   PUBLISH_COMMIT="false"
@@ -156,6 +177,24 @@ else
         ;;
       --scope=*)
         VERCEL_SCOPE="${1#*=}"
+        shift
+        ;;
+      --title)
+        CATALOG_TITLE="$2"
+        CATALOG_TITLE_SET="true"
+        shift 2
+        ;;
+      --title=*)
+        CATALOG_TITLE="${1#*=}"
+        CATALOG_TITLE_SET="true"
+        shift
+        ;;
+      --summary)
+        CATALOG_SUMMARY="$2"
+        shift 2
+        ;;
+      --summary=*)
+        CATALOG_SUMMARY="${1#*=}"
         shift
         ;;
       --projects-repo)
@@ -192,10 +231,30 @@ else
   if [ -z "$PROJECT_NAME" ]; then
     PROJECT_NAME="$AUTO_PROJECT_NAME"
   fi
+  if [ -z "$CATALOG_TITLE" ]; then
+    CATALOG_TITLE="$AUTO_CATALOG_TITLE"
+  fi
+  if [ "$CATALOG_TITLE_SET" = "false" ] && [ "$AUTO_CATALOG_TITLE" = "assessment Audit" ]; then
+    CATALOG_TITLE=$(PROJECT_NAME="$PROJECT_NAME" python3 - <<'PY'
+import os
+name = os.environ["PROJECT_NAME"].replace("-", " ").replace("_", " ")
+print(" ".join(part[:1].upper() + part[1:] for part in name.split()) + " Audit")
+PY
+)
+  fi
+  if [ -z "$CATALOG_SUMMARY" ]; then
+    CATALOG_SUMMARY="$AUTO_CATALOG_SUMMARY"
+  fi
 fi
 
 if [ "${PROVIDER:-}" = "github-pages" ] && [ -z "${PROJECTS_REPO:-}" ]; then
   PROJECTS_REPO="$AUTO_PROJECTS_REPO"
+fi
+if [ "${PROVIDER:-}" = "github-pages" ] && [ -z "${CATALOG_TITLE:-}" ]; then
+  CATALOG_TITLE="$AUTO_CATALOG_TITLE"
+fi
+if [ "${PROVIDER:-}" = "github-pages" ] && [ -z "${CATALOG_SUMMARY:-}" ]; then
+  CATALOG_SUMMARY="$AUTO_CATALOG_SUMMARY"
 fi
 
 if [ -z "${VERCEL_SCOPE:-}" ] && [ -f .ux-audit.json ]; then
@@ -259,8 +318,9 @@ printf "${CYAN}${BOLD}  ── Deploy Configuration ─────────�
 printf "${BOLD}  Report:   ${RESET}%s\n" "$REPORT_FILE"
 printf "${BOLD}  Provider: ${RESET}%s\n" "$PROVIDER"
 if [ "$PROVIDER" = "github-pages" ]; then
-  printf "${BOLD}  URL:      ${RESET}https://rolemodel.github.io/rolemodel-ux-audit-projects/%s/audit\n" "$PROJECT_NAME"
+  printf "${BOLD}  URL:      ${RESET}https://rolemodel.github.io/rolemodel-ux-audit-projects/%s\n" "$PROJECT_NAME"
   printf "${BOLD}  Repo:     ${RESET}%s\n" "$PROJECTS_REPO"
+  printf "${BOLD}  Catalog: ${RESET}%s\n" "$CATALOG_TITLE"
 else
   printf "${BOLD}  URL slug: ${RESET}%s.vercel.app\n" "$PROJECT_NAME"
 fi
@@ -353,7 +413,51 @@ case "$PROVIDER" in
     fi
     touch "$PROJECTS_REPO/.nojekyll"
 
-    git -C "$PROJECTS_REPO" add .nojekyll "$PROJECT_NAME/audit"
+    CATALOG_PATH="$DEST_DIR/catalog.json"
+    CATALOG_SLUG="$PROJECT_NAME" \
+    CATALOG_TITLE="$CATALOG_TITLE" \
+    CATALOG_SUMMARY="$CATALOG_SUMMARY" \
+    CATALOG_PATH="$CATALOG_PATH" \
+      python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+path = Path(os.environ["CATALOG_PATH"])
+slug = os.environ["CATALOG_SLUG"]
+title = os.environ["CATALOG_TITLE"]
+summary = os.environ["CATALOG_SUMMARY"]
+
+if path.exists():
+    data = json.loads(path.read_text())
+else:
+    data = {}
+
+data["slug"] = data.get("slug") or slug
+data["title"] = data.get("title") or title
+data["summary"] = data.get("summary") or summary
+data["status"] = data.get("status") or "Published"
+
+links = data.get("links")
+if not isinstance(links, list):
+    links = []
+
+audit_href = f"./{slug}/"
+has_audit = any(link.get("href") == audit_href for link in links if isinstance(link, dict))
+if not has_audit:
+    links.insert(0, {"label": "Audit", "href": audit_href})
+
+data["links"] = links
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+
+    if [ -f "$PROJECTS_REPO/scripts/build-index.mjs" ]; then
+      (cd "$PROJECTS_REPO" && node scripts/build-index.mjs)
+    else
+      printf "${YELLOW}  ⚠  Catalog builder not found at %s/scripts/build-index.mjs; index.html was not regenerated.${RESET}\n" "$PROJECTS_REPO" >&2
+    fi
+
+    git -C "$PROJECTS_REPO" add .nojekyll index.html "$PROJECT_NAME/audit"
 
     if git -C "$PROJECTS_REPO" diff --cached --quiet; then
       printf "${DIM}  No catalog changes to commit.${RESET}\n"
@@ -370,7 +474,8 @@ case "$PROVIDER" in
     fi
 
     echo ""
-    printf "${GREEN}${BOLD}  ✓ GitHub Pages URL: ${RESET}${BOLD}https://rolemodel.github.io/rolemodel-ux-audit-projects/%s/audit${RESET}\n" "$PROJECT_NAME"
+    printf "${GREEN}${BOLD}  ✓ GitHub Pages URL: ${RESET}${BOLD}https://rolemodel.github.io/rolemodel-ux-audit-projects/%s${RESET}\n" "$PROJECT_NAME"
+    printf "${GREEN}${BOLD}  ✓ Catalog updated: ${RESET}${BOLD}https://rolemodel.github.io/rolemodel-ux-audit-projects/${RESET}\n"
     ;;
   *)
     printf "${YELLOW}  ✗ Unknown provider '%s'. Use: vercel, netlify, surge, or github-pages${RESET}\n" "$PROVIDER" >&2

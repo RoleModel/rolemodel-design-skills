@@ -234,7 +234,33 @@ RapidAir example:
 
 https://rolemodel.github.io/rolemodel-ux-audit-projects/rapidair/audit
 
-## 15. Add an interactive demo link only when needed
+## 15. Confirm the artifact appears in the GitHub Pages catalog index
+
+Every published artifact needs a path, and it also needs a way to be found.
+
+The GitHub Pages publisher creates or updates `<project-slug>/audit/catalog.json` and rebuilds the root `index.html` automatically. After publishing, confirm the project appears in the catalog:
+
+```txt
+https://rolemodel.github.io/rolemodel-ux-audit-projects/
+```
+
+For follow-up artifacts, update the project metadata file and rerun the builder:
+
+```sh
+cd ~/ux-audits/rolemodel-ux-audit-projects
+$EDITOR <project-slug>/audit/catalog.json
+node scripts/build-index.mjs
+```
+
+If the project has more than one artifact, keep them grouped under the same project entry. Example links:
+
+- audit report: `/<project-slug>/`
+- interactive demo: external Vercel URL or `/<project-slug>/<demo-slug>/`
+- PDF or paged document: `/<project-slug>/<file-name>.pdf`
+
+Commit and push the `catalog.json` and generated `index.html` update with the artifact publish commit, or as the next commit if the publish script already pushed.
+
+## 16. Add an interactive demo link only when needed
 
 Use GitHub Pages for the static audit report.
 
@@ -244,7 +270,7 @@ RapidAir demo example:
 
 https://rapidair.vercel.app
 
-## 16. Add a new interactive demo as a submodule
+## 17. Add a new interactive demo as a submodule
 
 If a project needs a real demo app, create or use a separate GitHub repo for that demo. Then add it as a submodule from the projects repo:
 
